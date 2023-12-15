@@ -2,10 +2,36 @@ library(ggplot2)
 library(tidyverse)
 
 #Loading the data
-statRes_map_CNV = read.csv('model_fit_Python/model_results/statRes_CNV.csv',header=TRUE)
-statRes_map_noCNV = read.csv('model_fit_Python/model_results/statRes_noCNV.csv',header=TRUE)
+statRes_map_noCNV = read.csv('model_fit_Python/model_results/statRes_map_noCNV.csv',header=TRUE)
+statRes_map_CNV = read.csv('model_fit_Python/model_results/results_2/statRes_map_CNV.csv',header=TRUE)
 
 metadata = read.csv('model_fit_Python/model_data/metadata.csv',header=TRUE)
+
+save(deg_merged, file = "model_fit_Python/model_results/results_2/deg_merged.Rdata")
+
+#getting DE genes
+sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5, na.rm=TRUE) #up_regulated
+sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5, na.rm=TRUE) #down-reg
+
+deg_up <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5)
+deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5)
+
+
+#colnames(deg_up)[2] <- "padj_1"
+#deg_up_cnv <- deg_up_cnv %>% mutate(genes = "up")
+#deg_up_merged <- deg_up_merged %>% select(1:4)
+#deg_down_merged <- cbind(de_down, de_down_cnv)
+#deg_up <- deg_up %>% select(1,3,7)
+#deg_up <- deg_up %>% remove_rownames %>% column_to_rownames(var="GeneID")
+#statRes_map_CNV <- statRes_map_CNV %>% remove_rownames %>% column_to_rownames(var="GeneID")
+#deg_down_cnv <- deg_down_cnv[(rownames(deg_down_cnv) %in% rownames(deg_down)),] #delete rows by name
+#deg_down_cnv <- deg_down_cnv %>% select(2,6)
+deg_up_merged <- deg_up_merged %>% mutate(Difference = B1_2-B1_1)
+
+save(deg_up_cnv, file = "model_fit_Python/model_results/deg_up_cnv.Rdata")
+write.csv(rna_cnv_2test, file = "model_data/TCGA/lung_cancer/last_test/rna_cnv_2test.csv")
+
+deg_merged <- deg_merged %>% mutate(difference = B1_2-B1_1)
 
 #Data manipulation and cleaning
 resFit_merged <- cbind(statRes_map_noCNV, statRes_map_CNV) %>% 
@@ -28,12 +54,12 @@ cnv_2 <- cnv %>% select(11:20)
 cnv_1 <- cnv_1/2
 cnv <- cbind(cnv_1, cnv_2)
 
-metadata_2 %>% remove_rownames %>% column_to_rownames(var="X") %>% metadata[-c(2,4,12,14), ]
+luad_cnv_tumor <- luad_cnv_tumor %>% remove_rownames %>% column_to_rownames(var="GeneID")
 
 #write.csv(rna_lusc, file="model_fit_Python/model_data/test2/rna_lusc.csv")
 
 
-resFit_noCNV <- resFit_noCNV %>% add_column(Group = "B1_1")
+deg_down <- deg_down %>% add_column(Group = "B1_1")
 resFit_CNV <- resFit_CNV %>% add_column(Group = "B1_2")
 
 resFit_plot <- rbind(resFit_noCNV, resFit_CNV)
