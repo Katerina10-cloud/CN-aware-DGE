@@ -7,13 +7,18 @@ library(ggpubr)
 library(DESeq2)
 
 #Exploration of CNV and RNAseq data 
-#rna = read.csv('model_data/TCGA/lung_cancer/last_test/rna_counts_3.csv',header=TRUE)
+statRes_map_cnv = read.csv('model_fit_Python/model_results/results_2/statRes_map_CNV.csv',header=TRUE)
+statRes_map_NOcnv = read.csv('model_fit_Python/model_results/results_1/statRes_map_noCNV.csv',header=TRUE)
 #deg_merged$group <- as.factor(deg_merged$group)
 
-cnv <- cnv %>% select(4)
-deg_merged <- cbind(deg_merged, cnv)
+save(res_allGenes, file = "~/model_fit_Python/model_results/results_2/res_allGenes.Rdata")
 
-rna_tumor = read.delim("model_data/TCGA/lung_cancer/LUSC/s1/s1_rna_tumor.tsv", header=TRUE, sep="\t")
+#res_allGenes$GeneID <- rownames(res_allGenes)
+#res_allGenes <- res_allGenes %>% mutate(difference = B1_2 - B1_1)
+#cnv <- cnv[(rownames(cnv) %in% rownames(res_allGenes)),]
+#cnv <- cnv %>% mutate(cnv_mean = rowMeans(cnv))
+
+#rna_tumor = read.delim("model_data/TCGA/lung_cancer/LUSC/s1/s1_rna_tumor.tsv", header=TRUE, sep="\t")
 #rna <- read.delim("~/model_data/TCGA/lung_cancer/LUSC/s10/s10_rna_tumor.tsv", header=TRUE, sep="\t")
 
 rna_tumor <- rna_tumor %>% select(2,4) %>% na.omit() %>% 
@@ -28,14 +33,12 @@ rna_normal <- rna_normal %>% select(2,4) %>% na.omit() %>%
 
 rna_normal_tumor <- cbind(rna_normal, rna_tumor)
 
-#save(rna_normal_tumor, file = "model_data/TCGA/lung_cancer/LUSC/rna_normal_tumor.Rdata")
-
-cnv_tumor = read.csv('model_fit_Python/model_data/test3/cnv.csv',header=TRUE)
+rna_cnv = read.csv('~/model_fit_Python/model_data/last_test/rna_cnv.csv',header=TRUE)
 #colnames(cnv)[9] <- "cnv_mean"
-cnv_tumor <- luad_cnv_tumor 
 
 cnv <- replace(cnv, cnv>5,6)  
-cnv <- cnv %>% mutate(cnv_mean = rowMeans(cnv)) 
+cnv_3_luad <- cnv_3_luad %>% mutate(cnv_mean = rowMeans(cnv_3_luad)) 
+
 
 cnv_tumor <- luad_cnv_tumor %>% replace(cnv_tumor, cnv_tumor>5, 6) %>% 
   mutate(cnv_mean = rowMeans(cnv_tumor)) %>% 
@@ -69,7 +72,7 @@ cnv <- cbind(cnv, cnv_normal_3)
 cnv <- cnv[1:3]/2
 
 #cnv_normal <- cnv[11:20]
-#cnv <- cnv %>% cnv[(rownames(cnv %in% rownames(rna)) ,] #delete rows by name
+#cnv <- cnv %>% cnv[(rownames(cnv %in% rownames(res_allGenes)),] #delete rows by name
 
 cnv <- cnv + 10e-9
 rna_normal_tumor <- rna_normal_tumor * cnv
@@ -134,21 +137,41 @@ cnv_tumor_3 <- replace(cnv_tumor_3, cnv_tumor_3>5, 6)
 cnv <- cnv %>% select(5,6,7)
 cnv <- cnv[(rownames(cnv) %in% rownames(rna_filt)),]
 
-cnv_tumor_3 <- cnv_tumor_3 %>%
+cnv_3 <- cnv_3 %>%
   #select(1:10) %>% 
-  mutate(cnv_mean = rowMeans(cnv_tumor_3)) %>% 
-  select(4)
+  mutate(cnv_mean = rowMeans(cnv_3))
 
-#cnv factorization
+  #select(4)
+
+#CNV factorization
 cnv <- cnv %>% 
   mutate(group = case_when(
-  cnv_mean < 0.5 ~ "0",
-  cnv_mean >= 0.5 & cnv_mean <= 1.5 ~ "1",
-  cnv_mean > 1.5 & cnv_mean < 2.5 ~ "2",
-  cnv_mean >= 2.5 & cnv_mean <= 3.5 ~ "3",
-  cnv_mean > 3.5 & cnv_mean <= 4.5 ~ "4",
-  cnv_mean > 4.5 ~ "5")) %>% 
-  select(5)
+  cnv_mean <= 0.5 ~ "0",
+  cnv_mean > 0.5 & cnv_mean <= 1.7 ~ "1",
+  cnv_mean > 1.7 & cnv_mean < 2.5 ~ "2",
+  cnv_mean >= 2.5 & cnv_mean < 3.5 ~ "3",
+  cnv_mean >= 3.5 & cnv_mean <= 4.5 ~ "4",
+  cnv_mean > 4.5 ~ "5")) 
+
+res_allGenes <- res_allGenes %>% 
+  mutate(cn_group = case_when(
+  cnv == "2" ~ "Diploid",
+  cnv == "0" ~ "cn_loss",
+  cnv == "1" ~ "cn_loss",
+  cnv == "3" ~ "cn_gain",
+  cnv == "4" ~ "cn_gain",
+  cnv == "5" ~ "Amplifications"))
+
+
+#gene group factorization
+res_allGenes <- res_allGenes %>% 
+  mutate(gene_group = case_when(
+    B1_1 <= -1.0 & padj <= 0.05 ~ "DEG",
+    B1_1 >= 1.0 & padj <= 0.05 ~ "DEG",
+    B1_1 < 1.0 & B1_1 > -1.0 ~ "no_DEG",
+    B1_1 >= 1.0 & padj > 0.05 ~ "other",
+    B1_1 <= -1.0 & padj > 0.05 ~ "other")) 
+
 
 deg_b1 <- deg_merged %>% select(1,3)
 deg_b2 <- deg_merged %>% select(2,3)
@@ -193,20 +216,22 @@ ggplot(plot_data, aes(x = effect_size, y = B1, fill = effect_size)) +
 #load("~/model_fit_Python/model_results/lusc_fit/")
 
 #Violin plot
-violin_plot <- ggplot(deg_merged, aes(x = group, y = difference, fill = group))+
+violin_plot <- ggplot(res_allGenes, aes(x = group, y = difference, fill = group))+
   geom_violin(trim=FALSE)+
-  stat_summary(fun.data=mean_sdl, mult=1, geom="pointrange", color="red")+
-  geom_jitter(shape=10, position=position_jitter(0.1))+
-  labs(title="CNV patterns and Effect size difference ((|B1_2| - |B1_1|), (n = 3482 DE genes))",x="CNV group", y = "Effect size difference (log2FC)")+
+  #geom_jitter(shape=10, position=position_jitter(0.1))+
+  labs(title="CNV patterns and Effect size difference ((|B1_2| - |B1_1|), (n = 27 489 genes))",x="CNV group", y = "Effect size difference (log2FC)")+
   geom_hline(yintercept = 0, linetype='dashed', color='blue')+
+  geom_boxplot(width=0.1)+
   theme_classic()
 violin_plot  
 
 #Scatter plot
-scatterplot <- ggplot(deg_merged, aes(x=cnv_mean, y=difference)) + 
+scatterplot <- ggplot(res_allGenes, aes(x=cnv_mean, y=difference)) + 
   geom_point()+
   geom_smooth()+
-  labs(title="CNV patterns and Effect size difference relationship ((|B1_2| - |B1_1|), (n = 3482 DE genes))",x="CNV mean", y = "Effect size difference (log2FC)")+
-  theme_classic()
+  labs(title="CNV patterns and Effect size difference relationship ((|B1_2| - |B1_1|), (n = 27489 genes))",x="CNV mean", y = "Effect size difference")+
+  theme_classic()+
+  geom_hline(yintercept = 0, linetype='dashed', color='red')+
+  geom_vline(xintercept = 2, linetype='dashed', color='blue')
 scatterplot  
 

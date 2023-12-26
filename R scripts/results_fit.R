@@ -2,19 +2,21 @@ library(ggplot2)
 library(tidyverse)
 
 #Loading the data
-statRes_map_noCNV = read.csv('model_fit_Python/model_results/statRes_map_noCNV.csv',header=TRUE)
+statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_1/statRes_map_noCNV.csv',header=TRUE)
 statRes_map_CNV = read.csv('model_fit_Python/model_results/results_2/statRes_map_CNV.csv',header=TRUE)
-
 metadata = read.csv('model_fit_Python/model_data/metadata.csv',header=TRUE)
 
-save(deg_merged, file = "model_fit_Python/model_results/results_2/deg_merged.Rdata")
+save(res_allGenes, file = "~/model_fit_Python/model_results/results_2/res_allGenes.Rdata")
 
 #getting DE genes
 sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5, na.rm=TRUE) #up_regulated
-sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5, na.rm=TRUE) #down-reg
+sum(res_allG$padj <= 0.05 & res_allG$B1_1 >= 1.0, na.rm=TRUE) #down-reg
+sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
+
 
 deg_up <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5)
 deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5)
+
 
 
 #colnames(deg_up)[2] <- "padj_1"
