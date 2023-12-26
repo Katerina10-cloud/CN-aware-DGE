@@ -11,7 +11,7 @@ statRes_map_cnv = read.csv('model_fit_Python/model_results/results_2/statRes_map
 statRes_map_NOcnv = read.csv('model_fit_Python/model_results/results_1/statRes_map_noCNV.csv',header=TRUE)
 #deg_merged$group <- as.factor(deg_merged$group)
 
-save(res_allGenes, file = "~/model_fit_Python/model_results/results_2/res_allGenes.Rdata")
+save(data_barplot, file = "~/model_fit_Python/model_results/results_2/data_barplot.Rdata")
 
 #res_allGenes$GeneID <- rownames(res_allGenes)
 #res_allGenes <- res_allGenes %>% mutate(difference = B1_2 - B1_1)
@@ -160,7 +160,7 @@ res_allGenes <- res_allGenes %>%
   cnv == "1" ~ "cn_loss",
   cnv == "3" ~ "cn_gain",
   cnv == "4" ~ "cn_gain",
-  cnv == "5" ~ "Amplifications"))
+  cnv == "5" ~ "cn_amplification"))
 
 
 #gene group factorization
@@ -235,3 +235,20 @@ scatterplot <- ggplot(res_allGenes, aes(x=cnv_mean, y=difference)) +
   geom_vline(xintercept = 2, linetype='dashed', color='blue')
 scatterplot  
 
+#Stacked Barplot
+#sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "Diploid")
+data_barplot <- data.frame(
+  gene_group = rep(c("DEG", "no_DEG", "other"), each = 4),
+  cn_group = rep(c("cn_gain", "cn_loss", "cn_amplification", "diploid"), 3),
+  number_of_genes = c(1710, 25, 1404, 198, 9755, 99, 7025, 1182, 570, 6, 432, 78)
+)
+
+barplot <- ggplot(data_barplot, aes(fill = cn_group, y = number_of_genes, x = gene_group))+
+  geom_bar(stat = "identity")+
+  labs(x='Gene group', y='Frequency', title='CNV informed Gene Expression (n_genes = 22 484)', fill = "CN_group")+
+  scale_fill_manual('Position', values=c('coral2', 'steelblue', 'green', 'red'))+
+  #geom_text(aes(gene_group, label = number_of_genes), size = 3, position=position_dodge2(width=0.5))+
+  theme_minimal()
+  #facet_wrap("cn_group")+
+barplot
+  

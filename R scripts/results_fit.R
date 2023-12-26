@@ -13,7 +13,6 @@ sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5, na.r
 sum(res_allG$padj <= 0.05 & res_allG$B1_1 >= 1.0, na.rm=TRUE) #down-reg
 sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
 
-
 deg_up <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5)
 deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5)
 
