@@ -12,10 +12,13 @@ save(res_allGenes, file = "~/model_fit_Python/model_results/results_2/res_allGen
 sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5, na.rm=TRUE) #up_regulated
 sum(res_allG$padj <= 0.05 & res_allG$B1_1 >= 1.0, na.rm=TRUE) #down-reg
 sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
+sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "Diploid", na.rm=TRUE)
+
+sum(deg_merged$gene_group == "not_explained" & deg_merged$cn_group == "5", na.rm=TRUE)
+
 
 deg_up <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5)
 deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5)
-
 
 
 #colnames(deg_up)[2] <- "padj_1"
@@ -23,7 +26,7 @@ deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_ma
 #deg_up_merged <- deg_up_merged %>% select(1:4)
 #deg_down_merged <- cbind(de_down, de_down_cnv)
 #deg_up <- deg_up %>% select(1,3,7)
-#deg_up <- deg_up %>% remove_rownames %>% column_to_rownames(var="GeneID")
+#deg_merged <- deg_merged %>% remove_rownames %>% column_to_rownames(var="Row.names")
 #statRes_map_CNV <- statRes_map_CNV %>% remove_rownames %>% column_to_rownames(var="GeneID")
 #deg_down_cnv <- deg_down_cnv[(rownames(deg_down_cnv) %in% rownames(deg_down)),] #delete rows by name
 #deg_down_cnv <- deg_down_cnv %>% select(2,6)
