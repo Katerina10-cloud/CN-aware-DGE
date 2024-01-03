@@ -242,28 +242,23 @@ save(brca_cnv_tumor, file = '~/model_data/TCGA/breast_cancer/brca_cnv_tumor.Rdat
 #common_cols <- intersect(colnames(luad_rna_normal), colnames(luad_rna_tumor))
 #luad_rna_normal <- luad_rna_normal[, c(-8,-14,-28,-30,-32,-33,-39,-40,-42,-47,-55,-57,-58)]
 
-colnames(luad_rna_normal) <- c('s1_normal','s2_normal','s3_normal','s4_normal','s5_normal', 's6_normal',
-                              's7_normal','s8_normal','s9_normal','s10_normal','s11_normal', 's12_normal',
-                              's13_normal','s14_normal','s15_normal','s16_normal','s17_normal', 's18_normal',
-                              's19_normal','s20_normal','s21_normal','s22_normal','s23_normal', 's24_normal',
-                              's25_normal','s26_normal','s27_normal','s28_normal','s29_normal', 's30_normal',
-                              's31_normal','s32_normal','s33_normal','s34_normal','s35_normal', 's36_normal',
-                              's37_normal','s38_normal','s39_normal','s40_normal','s41_normal', 's42_normal',
-                              's43_normal','s44_normal','s45_normal','s46_normal')
+colnames(rna_tum_3) <- c('s1_tumor', 's2_tumor', 's3_tumor')
+
 #rownames(countdata) <- seqdata[,1]
 #substr("ThisIsAString", start=1, stop=5) #shorten sample names
 #colnames(countdata) <- substr(colnames(countdata), 1, 7)
 #colnames(countdata)==sampleinfo$SampleName
 #all(colnames(countdata)==sampleinfo$SampleName)
 
+
 #Filtering low counts genes
-rna_normal_tumor_3 <- rna_normal_tumor_3[which(rowSums(rna_normal_tumor_3)>10),]
-cnv <- cnv[(rownames(cnv) %in% rownames(rna_normal_tumor_3)),] #delete rows by name
+rna_normal_tumor_brca <- rna_normal_tumor_brca[which(rowSums(rna_normal_tumor_brca)>10),]
+rna_normal_tumor_brca <- rna_normal_tumor_brca[(rownames(rna_normal_tumor_brca) %in% rownames(cnv_3)),] #delete rows by name
 
-save(luad_cnv_tumor, file = "~/model_data/TCGA/lung_cancer/cnv_luad.Rdata")
-write.csv(rna_cnv, "model_data/TCGA/lung_cancer/last_test/rna_cnv.csv")
+save(rna_normal_tumor_brca, file = "~/model_data/TCGA/breast_cancer/rna_normal_tumor_brca.Rdata")
+write.csv(metadata, "~/model_data/TCGA/breast_cancer/metadata.csv")
 
-luad_cnv_tumor <- luad_cnv_tumor %>% remove_rownames %>% column_to_rownames(var="GeneID")
+rna_normal_tumor_brca <- rna_normal_tumor_brca %>% remove_rownames %>% column_to_rownames(var="Row.names")
 rna_normal <- rna_normal_tumor %>% select(1:46)
 rna_tumor <- rna_normal_tumor %>% select(47:92)
 cnv_tumor_3 <- luad_cnv_tumor %>% select(8,16,27)

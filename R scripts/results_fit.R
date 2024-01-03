@@ -2,24 +2,24 @@ library(ggplot2)
 library(tidyverse)
 
 #Loading the data
-statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_1/statRes_map_noCNV.csv',header=TRUE)
+statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
 statRes_map_CNV = read.csv('model_fit_Python/model_results/results_2/statRes_map_CNV.csv',header=TRUE)
 metadata = read.csv('model_fit_Python/model_data/metadata.csv',header=TRUE)
 
-save(res_allGenes, file = "~/model_fit_Python/model_results/results_2/res_allGenes.Rdata")
+save(rna_cnv, file = "~/model_fit_Python/model_results/results_brca/res_allGenes.Rdata")
 
 #getting DE genes
-sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5, na.rm=TRUE) #up_regulated
-sum(res_allG$padj <= 0.05 & res_allG$B1_1 >= 1.0, na.rm=TRUE) #down-reg
+sum(statRes_map_NOcnv$padj <= 0.05 & statRes_map_NOcnv$B1_1 > 0.5, na.rm=TRUE) #up_regulated
+sum(statRes_map_NOcnv$padj <= 0.05 & statRes_map_NOcnv$B1_1 > -0.5, na.rm=TRUE) #down-reg
+
 sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
-sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "Diploid", na.rm=TRUE)
+sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "diploid", na.rm=TRUE)
+sum(deg$gene_group == "dosage-insensitive" & deg$cnv == "5", na.rm=TRUE)
 
-sum(deg_merged$gene_group == "not_explained" & deg_merged$cn_group == "5", na.rm=TRUE)
 
-
-deg_up <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange > 0.5)
-deg_down <- subset(statRes_map_noCNV, statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$log2FoldChange < -0.5)
-
+deg_up <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 > 0.5)
+deg_down <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 < -0.5)
+deg <- rbind(deg_up, deg_down)
 
 #colnames(deg_up)[2] <- "padj_1"
 #deg_up_cnv <- deg_up_cnv %>% mutate(genes = "up")
@@ -58,7 +58,7 @@ cnv_2 <- cnv %>% select(11:20)
 cnv_1 <- cnv_1/2
 cnv <- cbind(cnv_1, cnv_2)
 
-luad_cnv_tumor <- luad_cnv_tumor %>% remove_rownames %>% column_to_rownames(var="GeneID")
+deg <- deg %>% remove_rownames %>% column_to_rownames(var="Row.names")
 
 #write.csv(rna_lusc, file="model_fit_Python/model_data/test2/rna_lusc.csv")
 
@@ -160,4 +160,19 @@ library(gridExtra)
 library(grid)
 
 grid.arrange(p1, p2, ncol=2)
-            
+
+data_barplot_geneDosage <- data.frame(
+  gene_group = rep(c("super-dosage", "d-sensitive", "d-insensitive"), each = 6),
+  cn_group = rep(c("0", "1", "2", "3", "4", "5"), 3),
+  number_of_genes = c(1, 23, 32, 26, 23, 65, 0, 1, 178, 483, 36, 796, 0, 0, 1, 399, 816, 600)
+)
+
+barplot <- ggplot(data_barplot_geneDosage, aes(fill = cn_group, y = number_of_genes, x = gene_group))+
+  geom_bar(stat = "identity")+
+  labs(x='Gene group', y='Frequency', title='CNV dosage effect on DGE, (LUAD, n_genes=3482)')+
+  scale_fill_manual('Position', values=c('red', 'green', 'steelblue', 'violet', 'pink', 'coral2'))+
+  #geom_text(aes(gene_group, label = number_of_genes), size = 3, position=position_dodge2(width=0.5))+
+  theme_minimal()+
+  #facet_wrap("cn_group", ncol=2)+
+  guides(fill=guide_legend("CN group"))
+barplot
