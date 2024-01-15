@@ -10,36 +10,33 @@ getProjectSummary('TCGA-LUAD')
 luad_cnv_list <- c("TCGA-50-5932-01A-11D-1752-01", "TCGA-49-6742-01A-11D-1854-01",
                   "TCGA-44-6147-01A-11D-A273-01", "TCGA-55-6979-01A-11D-1943-01",
                   "TCGA-50-5931-01A-11D-1752-01", "TCGA-38-4626-01A-01D-1549-01",
-                  "TCGA-91-6835-01A-11D-1854-01", "TCGA-49-4490-01A-21D-1854-01",
-                  "TCGA-55-6970-01A-11D-1943-01", "TCGA-55-6969-01A-11D-1943-01",
+                  "TCGA-91-6835-01A-11D-1854-01", "TCGA-49-4490-01A-21R-1858-07",
+                  "TCGA-55-6970-01A-11D-1943-01", "TCGA-55-6969-01A-11D-1943-01", 
                   "TCGA-91-6831-01A-11D-1854-01", "TCGA-50-5936-01A-11D-1624-01",
-                  "TCGA-44-2665-01A-01D-0944-01", "TCGA-44-6776-01A-11D-1854-01",
-                  "TCGA-55-6978-01A-11D-1943-01", "TCGA-49-6744-01A-11D-1854-01",
-                  "TCGA-55-6982-01A-11D-1943-01", "TCGA-44-3396-01A-01D-1204-01",
-                  "TCGA-49-6761-01A-31D-1943-01", "TCGA-44-6778-01A-11D-1854-01",
-                  "TCGA-44-6145-01A-11D-1752-01", "TCGA-50-6595-01A-12D-1854-01",
-                  "TCGA-44-6148-01A-11D-1752-01", "TCGA-91-6828-01A-11D-1854-01",
-                  "TCGA-91-6849-01A-11D-1943-01", "TCGA-91-6847-01A-11D-1943-01",
-                  "TCGA-44-2668-01A-01D-0944-01", "TCGA-44-2662-01A-01D-0944-01",
-                  "TCGA-44-5645-01A-01D-1624-01", "TCGA-55-6985-01A-11D-1943-01",
-                  "TCGA-44-2657-01A-01D-1549-01", "TCGA-73-4676-01A-01D-1752-01",
+                  "TCGA-44-6776-01A-11D-1854-01", "TCGA-55-6978-01A-11D-1943-01",
+                  "TCGA-49-6744-01A-11D-1854-01", "TCGA-55-6982-01A-11D-1943-01",
+                  "TCGA-44-3396-01A-01D-1204-01", "TCGA-49-6761-01A-31D-1943-01", 
+                  "TCGA-44-6778-01A-11D-1854-01", "TCGA-44-6145-01A-11D-1752-01", 
+                  "TCGA-50-6595-01A-12D-1854-01", "TCGA-44-6148-01A-11D-1752-01",
+                  "TCGA-91-6828-01A-11D-1854-01", "TCGA-91-6849-01A-11D-1943-01",
+                  "TCGA-91-6847-01A-11D-1943-01", "TCGA-44-2662-01A-01D-0944-01",
+                  "TCGA-55-6985-01A-11D-1943-01", "TCGA-73-4676-01A-01D-1752-01",
                   "TCGA-50-5939-01A-11D-1624-01", "TCGA-50-5935-01A-11D-1752-01",
                   "TCGA-55-6981-01A-11D-1943-01", "TCGA-91-6829-01A-21D-1854-01",
-                  "TCGA-44-6777-01A-11D-1854-01", "TCGA-55-6983-01A-11D-1943-01",
+                  "TCGA-44-6777-01A-11D-1854-01", 
                   "TCGA-91-6836-01A-21D-1854-01", "TCGA-55-6986-01A-11D-1943-01",
                   "TCGA-38-4625-01A-01D-1204-01", "TCGA-50-5933-01A-11D-1752-01",
                   "TCGA-38-4632-01A-01D-1752-01", "TCGA-55-6971-01A-11D-1943-01",
                   "TCGA-55-6975-01A-11D-1943-01", "TCGA-49-6743-01A-11D-1854-01",
                   "TCGA-49-4512-01A-21D-1854-01", "TCGA-55-6972-01A-11D-1943-01",
-                  "TCGA-38-4627-01A-01D-1204-01", "TCGA-44-3398-01A-01D-1549-01",
-                  "TCGA-44-2655-01A-01D-0944-01", "TCGA-44-6146-01A-11D-1752-01",
-                  "TCGA-44-2661-01A-01D-1549-01", "TCGA-49-6745-01A-11D-1854-01")
+                  "TCGA-38-4627-01A-01D-1204-01", "TCGA-44-2655-01A-01D-0944-01", 
+                  "TCGA-49-6745-01A-11D-1854-01")
 
 luad_rna_tumor <- c("TCGA-50-5932-01A-11R-1755-07", "TCGA-49-6742-01A-11R-1858-07",
                     "TCGA-44-6147-01A-11R-1755-07", "TCGA-55-6979-01A-11R-1949-07",
                     "TCGA-50-5931-01A-11R-1755-07", "TCGA-38-4626-01A-01R-1206-07",
-                    "TCGA-91-6835-01A-11R-1858-07", 
-                    "TCGA-49-4490-01A-21R-1858-07", "TCGA-55-6970-01A-11R-1949-07",
+                    "TCGA-91-6835-01A-11R-1858-07", "TCGA-49-4490-01A-21R-1858-07", 
+                    "TCGA-55-6970-01A-11R-1949-07",
                     "TCGA-55-6969-01A-11R-1949-07", "TCGA-91-6831-01A-11R-1858-07",
                     "TCGA-50-5936-01A-11R-1628-07", 
                     "TCGA-44-6776-01A-11R-1858-07", "TCGA-55-6978-01A-11R-1949-07",
@@ -48,22 +45,30 @@ luad_rna_tumor <- c("TCGA-50-5932-01A-11R-1755-07", "TCGA-49-6742-01A-11R-1858-0
                     "TCGA-44-6778-01A-11R-1858-07", "TCGA-44-6145-01A-11R-1755-07",
                     "TCGA-50-6595-01A-12R-1858-07", "TCGA-44-6148-01A-11R-1755-07",
                     "TCGA-91-6828-01A-11R-1858-07", "TCGA-91-6849-01A-11R-1949-07",
-                    "TCGA-91-6847-01A-11R-1949-07", 
-                    "TCGA-44-2662-01A-01R-0946-07", 
-                    "TCGA-55-6985-01A-11R-1949-07", 
-                                                    "TCGA-73-4676-01A-01R-1755-07",
+                    "TCGA-91-6847-01A-11R-1949-07", "TCGA-44-2662-01A-01R-0946-07", 
+                    "TCGA-55-6985-01A-11R-1949-07", "TCGA-73-4676-01A-01R-1755-07",
                     "TCGA-50-5939-01A-11R-1628-07", "TCGA-50-5935-01A-11R-1755-07",
                     "TCGA-55-6981-01A-11R-1949-07", "TCGA-91-6829-01A-21R-1858-07",
-                                                    "TCGA-44-6777-01A-11R-1858-07",
-                                                    "TCGA-91-6836-01A-21R-1858-07",
+                    "TCGA-44-6777-01A-11R-1858-07", "TCGA-91-6836-01A-21R-1858-07",
                     "TCGA-55-6986-01A-11R-1949-07", "TCGA-38-4625-01A-01R-1206-07",
                     "TCGA-50-5933-01A-11R-1755-07", "TCGA-38-4632-01A-01R-1755-07",
                     "TCGA-55-6971-01A-11R-1949-07", "TCGA-55-6975-01A-11R-1949-07",
                     "TCGA-49-6743-01A-11R-1858-07", "TCGA-49-4512-01A-21R-1858-07",
                     "TCGA-55-6972-01A-11R-1949-07", "TCGA-38-4627-01A-01R-1206-07",
-                                                     "TCGA-44-2655-01A-01R-0946-07",
-                    
-                    "TCGA-49-6745-01A-11R-1858-07")
+                    "TCGA-44-2655-01A-01R-0946-07", "TCGA-49-6745-01A-11R-1858-07")
+
+luad_rna_normal <- c("TCGA-50-5932", "TCGA-49-6742","TCGA-44-6147", "TCGA-55-6979",
+                    "TCGA-50-5931", "TCGA-38-4626", "TCGA-91-6835", "TCGA-49-4490", 
+                    "TCGA-55-6970", "TCGA-55-6969", "TCGA-91-6831", "TCGA-50-5936", 
+                    "TCGA-44-6776", "TCGA-55-6978", "TCGA-49-6744", "TCGA-55-6982",
+                    "TCGA-44-3396", "TCGA-49-6761", "TCGA-44-6778", "TCGA-44-6145",
+                    "TCGA-50-6595", "TCGA-44-6148", "TCGA-91-6828", "TCGA-91-6849",
+                    "TCGA-91-6847", "TCGA-44-2662", "TCGA-55-6985", "TCGA-73-4676",
+                    "TCGA-50-5939", "TCGA-50-5935", "TCGA-55-6981", "TCGA-91-6829",
+                    "TCGA-44-6777", "TCGA-91-6836", "TCGA-55-6986", "TCGA-38-4625",
+                    "TCGA-50-5933", "TCGA-38-4632", "TCGA-55-6971", "TCGA-55-6975",
+                    "TCGA-49-6743", "TCGA-49-4512", "TCGA-55-6972", "TCGA-38-4627",
+                    "TCGA-44-2655", "TCGA-49-6745")
 
 ##build a query to retrieve data
 query_TCGA_cnv <- GDCquery(project = 'TCGA-LUAD',
@@ -93,8 +98,10 @@ query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                            workflow.type = 'STAR - Counts',
                            data.type = "Gene Expression Quantification",
                            sample.type = "Solid Tissue Normal",
-                           access = 'open')
+                           access = 'open',
+                           barcode = luad_rna_normal)
 
+GDCdownload(query_TCGA_rna)
 
 #clinical data
 barcode_tumor <- c("TCGA-50-5932", "TCGA-49-6742", "TCGA-44-6147-", "TCGA-55-6979", "TCGA-50-5931", 
@@ -256,19 +263,62 @@ getResults(query_TCGA_cnv)
 GDCdownload(query_TCGA_rna)
 
 #prepare data
-brca_cnv <- GDCprepare(query_TCGA_cnv, summarizedExperiment = TRUE)
-brca_cnv_tumor <- assay(brca_cnv, 'copy_number', rownames = TRUE)
+luad_cnv <- GDCprepare(query_TCGA_cnv, summarizedExperiment = TRUE)
+luad_cnv_tumor <- assay(luad_cnv, 'copy_number', rownames = TRUE)
 
-luad_rna_tumor <- GDCprepare(query_TCGA_rna, summarizedExperiment = TRUE)
-luad_rna_tum <- assay(luad_rna_tumor, 'tpm_unstrand', rownames = TRUE)
+luad_rna_normal <- GDCprepare(query_TCGA_rna, summarizedExperiment = TRUE)
+luad_rna_norm <- assay(luad_rna_normal, 'unstranded', rownames = TRUE)
 
-gene_name <- as.data.frame(luad_rna_tumor@rowRanges@elementMetadata@listData[["gene_name"]]) 
+
+gene_name <- as.data.frame(luad_rna_normal@rowRanges@elementMetadata@listData[["gene_name"]]) 
 colnames(gene_name)[1] <- "GeneID"
-luad_rna_tum <- as.data.frame(luad_rna_tum)
-luad_rna_tum <- cbind(gene_name, luad_rna_tum)
-luad_rna_tum <- luad_rna_tum[!duplicated(luad_rna_tum$GeneID), ] %>% remove_rownames %>% column_to_rownames(var="GeneID")
+luad_rna_norm <- as.data.frame(luad_rna_norm)
+luad_rna_norm <- cbind(gene_name, luad_rna_norm)
+luad_rna_norm <- luad_rna_norm[!duplicated(luad_rna_norm$GeneID), ] %>% remove_rownames %>% column_to_rownames(var="GeneID")
+luad_cnv_tumor <- na.omit(luad_cnv_tumor)
 
-save(luad_rna_tum, file = '~/model_data/TCGA/lung_cancer/LUAD/rna_tmp_tum.Rdata')
+colnames(brca_rna_norm) <- substr(colnames(brca_rna_norm), 1, 16)
+
+save(brca_rna_norm, file = '~/model_data/TCGA/breast_cancer/data/brca_rna_norm.Rdata')
+
+#clinical data
+barcode_tumor <- c("TCGA-E9-A1RH", "TCGA-BH-A1ET", "TCGA-BH-A0HK", "TCGA-BH-A0H5",
+                   "TCGA-AC-A2FM", "TCGA-BH-A0DK", "TCGA-BH-A1FC", "TCGA-E9-A1N9",
+                   "TCGA-GI-A2C8", "TCGA-BH-A18L", "TCGA-BH-A0BS", "TCGA-BH-A0BQ",
+                   "TCGA-BH-A209", "TCGA-BH-A1EV", "TCGA-BH-A1FR", "TCGA-BH-A0BC",
+                   "TCGA-BH-A0BA", "TCGA-BH-A18J", "TCGA-BH-A203", "TCGA-BH-A18M",
+                   "TCGA-BH-A1FJ", "TCGA-BH-A18R", "TCGA-E9-A1ND", "TCGA-A7-A0DB",
+                   "TCGA-E2-A158", "TCGA-BH-A1FU", "TCGA-E9-A1RF", "TCGA-E9-A1N5",
+                   "TCGA-E2-A1L7", "TCGA-E2-A1IG", "TCGA-AC-A2FF", "TCGA-BH-A1FE",
+                   "TCGA-BH-A0DT", "TCGA-BH-A1EW", "TCGA-A7-A0CE", "TCGA-BH-A1F2",
+                   "TCGA-A7-A13G", "TCGA-BH-A18V", "TCGA-AC-A2FB", "TCGA-A7-A13F",
+                   "TCGA-BH-A0E0", "TCGA-BH-A1F0", "TCGA-BH-A0B3", "TCGA-BH-A1EU",
+                   "TCGA-BH-A0DD", "TCGA-AC-A23H", "TCGA-BH-A0AY", "TCGA-E9-A1RB",
+                   "TCGA-E9-A1NA", "TCGA-BH-A1FD", "TCGA-BH-A0BM", "TCGA-BH-A1F8",
+                   "TCGA-E9-A1RI", "TCGA-BH-A1F6", "TCGA-E9-A1N6", "TCGA-A7-A0CH",
+                   "TCGA-BH-A0H7", "TCGA-BH-A18U", "TCGA-BH-A18U", "TCGA-E2-A1BC",
+                   "TCGA-BH-A1FN", "TCGA-BH-A1FM", "TCGA-E2-A15M", "TCGA-BH-A0DH",
+                   "TCGA-BH-A0AU", "TCGA-E9-A1RD", "TCGA-BH-A0C0", "TCGA-BH-A0HA",
+                   "TCGA-BH-A0BZ", "TCGA-BH-A0BW", "TCGA-BH-A1EN", "TCGA-BH-A1FB",
+                   "TCGA-E9-A1NF", "TCGA-BH-A0H9", "TCGA-BH-A0DP", "TCGA-A7-A0DC",
+                   "TCGA-E2-A1LB", "TCGA-E2-A15I", "TCGA-BH-A0BV", "TCGA-BH-A18N",
+                   "TCGA-E9-A1N4", "TCGA-BH-A0DQ", "TCGA-BH-A0BT", "TCGA-BH-A0B7",
+                   "TCGA-BH-A18K", "TCGA-A7-A0D9", "TCGA-E9-A1NG", "TCGA-BH-A0DO",
+                   "TCGA-BH-A0B8", "TCGA-BH-A1FG", "TCGA-BH-A18Q", "TCGA-E9-A1R7",
+                   "TCGA-BH-A0DG", "TCGA-BH-A208", "TCGA-BH-A0DL", "TCGA-BH-A0C3",
+                   "TCGA-A7-A13E", "TCGA-BH-A0E1", "TCGA-BH-A0B5", "TCGA-BH-A204",
+                   "TCGA-BH-A0AZ", "TCGA-E2-A15K", "TCGA-BH-A1FH", "TCGA-BH-A18P",
+                   "TCGA-BH-A0BJ", "TCGA-E2-A1LH", "TCGA-E2-A153", "TCGA-BH-A18S",
+                   "TCGA-BH-A1EO", "TCGA-E9-A1RC", "TCGA-BH-A0DZ", "TCGA-E2-A1LS",
+                   "TCGA-BH-A0DV")
+
+clinical_brca <- GDCquery(project = "TCGA-BRCA", data.category = "Clinical", 
+                          data.format = "bcr xml", barcode = barcode_tumor)
+GDCdownload(clinical_brca)
+
+clinical_brca <- GDCprepare_clinic(clinical_brca, clinical.info = "patient")
+clinical_brca <- clinical_brca %>% select(1,6,22,107)
+save(clinical_brca, file = "~/model_data/TCGA/breast_cancer/data/clinical_brca.Rdata")
 
 #common_cols <- intersect(colnames(luad_rna_normal), colnames(luad_rna_tumor))
 #luad_rna_norm <- luad_rna_norm[, c(-8,-14,-28,-30,-32,-33,-39,-40,-42,-47,-55,-57,-58)]

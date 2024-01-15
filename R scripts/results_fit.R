@@ -176,3 +176,6 @@ barplot <- ggplot(data_barplot_geneDosage, aes(fill = cn_group, y = number_of_ge
   #facet_wrap("cn_group", ncol=2)+
   guides(fill=guide_legend("CN group"))
 barplot
+
+
+  
