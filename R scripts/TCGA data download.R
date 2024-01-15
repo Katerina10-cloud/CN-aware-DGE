@@ -5,7 +5,7 @@ library(SummarizedExperiment)
 
 #Get a list of projects
 gdcprojects = getGDCprojects()
-getProjectSummary('TCGA-BRCA')
+getProjectSummary('TCGA-LUAD')
 
 luad_cnv_list <- c("TCGA-50-5932-01A-11D-1752-01", "TCGA-49-6742-01A-11D-1854-01",
                   "TCGA-44-6147-01A-11D-A273-01", "TCGA-55-6979-01A-11D-1943-01",
@@ -38,31 +38,31 @@ luad_cnv_list <- c("TCGA-50-5932-01A-11D-1752-01", "TCGA-49-6742-01A-11D-1854-01
 luad_rna_tumor <- c("TCGA-50-5932-01A-11R-1755-07", "TCGA-49-6742-01A-11R-1858-07",
                     "TCGA-44-6147-01A-11R-1755-07", "TCGA-55-6979-01A-11R-1949-07",
                     "TCGA-50-5931-01A-11R-1755-07", "TCGA-38-4626-01A-01R-1206-07",
-                    "TCGA-91-6835-01A-11R-1858-07", "TCGA-50-5930-01A-11R-1755-07",
+                    "TCGA-91-6835-01A-11R-1858-07", 
                     "TCGA-49-4490-01A-21R-1858-07", "TCGA-55-6970-01A-11R-1949-07",
                     "TCGA-55-6969-01A-11R-1949-07", "TCGA-91-6831-01A-11R-1858-07",
-                    "TCGA-50-5936-01A-11R-1628-07", "TCGA-44-2665-01A-01R-0946-07",
+                    "TCGA-50-5936-01A-11R-1628-07", 
                     "TCGA-44-6776-01A-11R-1858-07", "TCGA-55-6978-01A-11R-1949-07",
                     "TCGA-49-6744-01A-11R-1858-07", "TCGA-55-6982-01A-11R-1949-07",
                     "TCGA-44-3396-01A-01R-1206-07", "TCGA-49-6761-01A-31R-1949-07",
                     "TCGA-44-6778-01A-11R-1858-07", "TCGA-44-6145-01A-11R-1755-07",
                     "TCGA-50-6595-01A-12R-1858-07", "TCGA-44-6148-01A-11R-1755-07",
                     "TCGA-91-6828-01A-11R-1858-07", "TCGA-91-6849-01A-11R-1949-07",
-                    "TCGA-91-6847-01A-11R-1949-07", "TCGA-44-2668-01A-01R-A278-07",
-                    "TCGA-44-2662-01A-01R-0946-07", "TCGA-44-5645-01A-01R-1628-07",
-                    "TCGA-55-6985-01A-11R-1949-07", "TCGA-55-6984-01A-11R-1949-07",
-                    "TCGA-44-2657-01A-01R-1107-07", "TCGA-73-4676-01A-01R-1755-07",
+                    "TCGA-91-6847-01A-11R-1949-07", 
+                    "TCGA-44-2662-01A-01R-0946-07", 
+                    "TCGA-55-6985-01A-11R-1949-07", 
+                                                    "TCGA-73-4676-01A-01R-1755-07",
                     "TCGA-50-5939-01A-11R-1628-07", "TCGA-50-5935-01A-11R-1755-07",
                     "TCGA-55-6981-01A-11R-1949-07", "TCGA-91-6829-01A-21R-1858-07",
-                    "TCGA-55-6980-01A-11R-1949-07", "TCGA-44-6777-01A-11R-1858-07",
-                    "TCGA-55-6983-01A-11R-1949-07", "TCGA-91-6836-01A-21R-1858-07",
+                                                    "TCGA-44-6777-01A-11R-1858-07",
+                                                    "TCGA-91-6836-01A-21R-1858-07",
                     "TCGA-55-6986-01A-11R-1949-07", "TCGA-38-4625-01A-01R-1206-07",
                     "TCGA-50-5933-01A-11R-1755-07", "TCGA-38-4632-01A-01R-1755-07",
                     "TCGA-55-6971-01A-11R-1949-07", "TCGA-55-6975-01A-11R-1949-07",
                     "TCGA-49-6743-01A-11R-1858-07", "TCGA-49-4512-01A-21R-1858-07",
                     "TCGA-55-6972-01A-11R-1949-07", "TCGA-38-4627-01A-01R-1206-07",
-                    "TCGA-44-3398-01A-01R-1107-07", "TCGA-44-2655-01A-01R-0946-07",
-                    "TCGA-44-6146-01A-11R-A278-07", "TCGA-44-2661-01A-01R-1107-07",
+                                                     "TCGA-44-2655-01A-01R-0946-07",
+                    
                     "TCGA-49-6745-01A-11R-1858-07")
 
 ##build a query to retrieve data
@@ -86,6 +86,37 @@ query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                        access = 'open',
                        barcode = luad_rna_tumor)
 
+#build a query to retrieve gene expression data
+query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
+                           data.category = 'Transcriptome Profiling',
+                           experimental.strategy = 'RNA-Seq',
+                           workflow.type = 'STAR - Counts',
+                           data.type = "Gene Expression Quantification",
+                           sample.type = "Solid Tissue Normal",
+                           access = 'open')
+
+
+#clinical data
+barcode_tumor <- c("TCGA-50-5932", "TCGA-49-6742", "TCGA-44-6147-", "TCGA-55-6979", "TCGA-50-5931", 
+                   "TCGA-38-4626", "TCGA-91-6835", "TCGA-49-4490", "TCGA-55-6970", "TCGA-55-6969", 
+                   "TCGA-91-6831", "TCGA-50-5936", "TCGA-44-6776", "TCGA-55-6978", "TCGA-49-6744", 
+                   "TCGA-55-6982", "TCGA-44-3396", "TCGA-49-6761", "TCGA-44-6778", "TCGA-44-6145",
+                    "TCGA-50-6595", "TCGA-44-6148", "TCGA-91-6828", "TCGA-91-6849", "TCGA-91-6847", 
+                    "TCGA-44-2662", "TCGA-55-6985", "TCGA-73-4676", "TCGA-50-5939", "TCGA-50-5935",
+                    "TCGA-55-6981", "TCGA-91-6829", "TCGA-44-6777", "TCGA-91-6836", "TCGA-55-6986", 
+                    "TCGA-38-4625", "TCGA-50-5933", "TCGA-38-4632", "TCGA-55-6971", "TCGA-55-6975",
+                    "TCGA-49-6743", "TCGA-49-4512", "TCGA-55-6972", "TCGA-38-4627", "TCGA-44-2655",
+                    "TCGA-49-6745")
+
+clinical_luad <- GDCquery(project = "TCGA-LUAD", data.category = "Clinical", 
+                          data.format = "bcr xml", barcode = barcode_tumor)
+GDCdownload(clinical_luad)
+
+clinical_luad <- GDCprepare_clinic(clinical_luad, clinical.info = "patient")
+clinical_luad <- clinical_luad %>% select(1,6,7,69)
+save(clinical_luad, file = "~/model_data/TCGA/lung_cancer/LUAD/data/clinical_luad.Rdata")
+
+#BRCA data
 
 brca_rna_tumor <- c("TCGA-E9-A1RH-01A-21R-A169-07", "TCGA-BH-A1ET-01A-11R-A137-07",
                     "TCGA-BH-A0HK-01A-11R-A056-07", "TCGA-BH-A0H5-01A-21R-A115-07",
@@ -222,27 +253,31 @@ query_TCGA_cnv <- GDCquery(project = 'TCGA-BRCA',
 getResults(query_TCGA_cnv)
 
 #download
-GDCdownload(query_TCGA_cnv)
+GDCdownload(query_TCGA_rna)
 
 #prepare data
 brca_cnv <- GDCprepare(query_TCGA_cnv, summarizedExperiment = TRUE)
 brca_cnv_tumor <- assay(brca_cnv, 'copy_number', rownames = TRUE)
 
-brca_rna_tumor <- GDCprepare(query_TCGA_tumor, summarizedExperiment = TRUE)
-brca_rna_tum <- assay(brca_rna_tumor, 'unstranded', rownames = TRUE)
+luad_rna_tumor <- GDCprepare(query_TCGA_rna, summarizedExperiment = TRUE)
+luad_rna_tum <- assay(luad_rna_tumor, 'tpm_unstrand', rownames = TRUE)
 
-gene_name <- as.data.frame(brca_cnv@rowRanges@elementMetadata@listData[["gene_name"]]) 
+gene_name <- as.data.frame(luad_rna_tumor@rowRanges@elementMetadata@listData[["gene_name"]]) 
 colnames(gene_name)[1] <- "GeneID"
-brca_cnv_tumor <- as.data.frame(brca_cnv_tumor)
-brca_cnv_tumor <- cbind(gene_name, brca_cnv_tumor)
-brca_cnv_tumor <- brca_cnv_tumor[!duplicated(brca_cnv_tumor$GeneID), ] %>% remove_rownames %>% column_to_rownames(var="GeneID")
+luad_rna_tum <- as.data.frame(luad_rna_tum)
+luad_rna_tum <- cbind(gene_name, luad_rna_tum)
+luad_rna_tum <- luad_rna_tum[!duplicated(luad_rna_tum$GeneID), ] %>% remove_rownames %>% column_to_rownames(var="GeneID")
 
-save(brca_cnv_tumor, file = '~/model_data/TCGA/breast_cancer/brca_cnv_tumor.Rdata')
+save(luad_rna_tum, file = '~/model_data/TCGA/lung_cancer/LUAD/rna_tmp_tum.Rdata')
 
 #common_cols <- intersect(colnames(luad_rna_normal), colnames(luad_rna_tumor))
-#luad_rna_normal <- luad_rna_normal[, c(-8,-14,-28,-30,-32,-33,-39,-40,-42,-47,-55,-57,-58)]
+#luad_rna_norm <- luad_rna_norm[, c(-8,-14,-28,-30,-32,-33,-39,-40,-42,-47,-55,-57,-58)]
 
-colnames(rna_tum_3) <- c('s1_tumor', 's2_tumor', 's3_tumor')
+rna_tum <- luad_rna_tum %>% select(8,16,27)
+colnames(rna_norm) <- c('s8_normal', 's16_normal', 's27_normal')
+colnames(rna_tum) <- c('s8_tumor', 's16_tumor', 's27_tumor')
+
+rna_tum <- rna_tum[(rownames(rna_tum) %in% rownames(res_allGenes)),]
 
 #rownames(countdata) <- seqdata[,1]
 #substr("ThisIsAString", start=1, stop=5) #shorten sample names

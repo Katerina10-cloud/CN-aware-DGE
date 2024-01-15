@@ -14,6 +14,10 @@ statRes_map_NOcnv = read.csv('~/model_fit_Python/model_results/results_brca/stat
 save(deg, file = "~/model_fit_Python/model_results/results_brca/deg.Rdata")
 save(metadata, file = "~/model_data/TCGA/breast_cancer/metadata.Rdata")
 
+rna_counts <- rna_counts %>% remove_rownames %>% column_to_rownames(var="X")
+rna_counts <- rna_counts[(rownames(rna_counts) %in% rownames(res_allGenes)),]
+
+
 #res_allGenes$GeneID <- rownames(res_allGenes)
 #res_allGenes <- res_allGenes %>% mutate(difference = B1_2 - B1_1)
 #cnv <- cnv[(rownames(cnv) %in% rownames(res_allGenes)),]
@@ -124,9 +128,9 @@ rna_normal <- round(rna_normal, 0)
 
 #Counts normalization
 rna_lusc <- rna_lusc %>% select(5,6,7,15,16,17) 
-rna_normalized <- rna_normal_tumor_brca %>%  as.matrix()
-rna_normalized <- DESeq2::varianceStabilizingTransformation(rna_normalized)
-#rna.log <- DESeq2::rlog(rna_tumor)
+rna_normalized <- rna_counts %>%  as.matrix()
+#rna_normalized <- DESeq2::varianceStabilizingTransformation(rna_normalized)
+rna_log_normalized <- DESeq2::rlog(rna_normalized)
 
 #rna.vst <- rna.vst[(rownames(rna.vst) %in% rownames(cnv)),]
 #rna <- rna.vst %>% as.data.frame() %>% select(11:20) 
@@ -137,13 +141,15 @@ rna_normalized <- DESeq2::varianceStabilizingTransformation(rna_normalized)
 #(x - mean(x)) / sd(x)
 #z-score calculation Gene Expression
 #dim(rna.vst)
-rna_zscore <- t(scale(t(rna_normalized)))
 
-rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:3) 
-rna_zscore_normal <- rna_zscore_normal %>% mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% na.omit()
+rna_tum_norm <- cbind(rna_tum, rna_norm)
 
+rna_zscore <- t(scale(t(rna_tum_norm)))
+
+rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(4:6) 
+rna_zscore_normal <- rna_zscore_normal %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(4)
 rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(4)
-rna_normal <- rna_normal %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_normal)) %>% select(4)
+
 
 #Selecting most variable genes
 #nTop = 10000
@@ -199,7 +205,7 @@ deg <- deg %>%
   ))
 
 
-
+cnv <- res_allGenes %>% select(5)
 deg_b1 <- deg_merged %>% select(1,3)
 deg_b2 <- deg_merged %>% select(2,3)
 plot_data_1 <- deg_b1 %>% mutate(effect_size = "B1_1")
@@ -208,22 +214,24 @@ plot_data <- rbind(plot_data_1, plot_data_2)
 
 colnames(plot_data_2)[1] <- "B1"
 
-#rna_zscore_normal <- rna_zscore_normal %>% select(4)
-#rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
-#cnv_group <- cnv_3 %>% select(5)
-#plot_data_2 <- merge(rna_zscore_normal, cnv_group, by = "row.names")
-#plot_data_2 <- plot_data_2 %>% remove_rownames %>% column_to_rownames(var="Row.names")
-#plot_data <- rbind(plot_data, plot_data_2)
+
+rna_zscore_tumor <- rna_zscore_tumor %>% mutate(sample_type = "Tumor")
+rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
+
+
+plot_data_2 <- merge(rna_zscore_normal, cnv, by = "row.names")
+plot_data_2 <- plot_data_2 %>% remove_rownames %>% column_to_rownames(var="Row.names")
+plot_data <- rbind(plot_data_1, plot_data_2)
 
 #Boxplot
 # Compute summary statistics
 summary.stats <- plot_data %>%
-  group_by(group) %>%
+  group_by(cnv) %>%
   get_summary_stats() %>%
-  select(group, n)
+  select(cnv, n)
 
 summary.plot <- ggsummarytable(
-  summary.stats, x = "group", y = c("n"),
+  summary.stats, x = "CNV group", y = c("n"),
   ggtheme = theme_bw()
 )
 summary.plot
@@ -254,6 +262,12 @@ ggplot(plot_data, aes(x = effect_size, y = B1, fill = effect_size)) +
   facet_wrap(~group, ncol=6) +
   theme_classic()
 
+#Comparison boxplot
+ggplot(plot_data, aes(x = sample_type, y = rna_mean, fill = sample_type)) + 
+  geom_boxplot(position = position_dodge()) +
+  labs(title="CNV patterns and mRNA expression (LUAD,Tumor vs Normal)",x="CNV group", y = "mRNA Z-score")+
+  facet_wrap(~cnv, ncol=6) +
+  theme_classic()
 
 #load("~/model_fit_Python/model_results/lusc_fit/")
 
