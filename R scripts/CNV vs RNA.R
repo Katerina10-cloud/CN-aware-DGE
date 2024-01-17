@@ -7,15 +7,17 @@ library(ggpubr)
 library(DESeq2)
 
 #Exploration of CNV and RNAseq data 
-statRes_map_cnv = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_CNV.csv',header=TRUE)
-statRes_map_NOcnv = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
+statRes_map_CNV = read.csv('~/model_fit_Python/model_results/results_luad/results_3/statRes_map_CNV.csv',header=TRUE)
+statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
 #deg_merged$group <- as.factor(deg_merged$group)
 
-save(deg, file = "~/model_fit_Python/model_results/results_brca/deg.Rdata")
-save(metadata, file = "~/model_data/TCGA/breast_cancer/metadata.Rdata")
+save(plot_data_2, file = "~/model_fit_Python/model_results/results_luad/results_3/plot_data_2.Rdata")
+save(metadata, file = "~/model_data/TCGA/lung_cancer/LUAD/metadata.Rdata")
+write.csv(rna, file = "~/model_data/TCGA/lung_cancer/LUAD/rna_cnv_10.csv")
 
-rna_counts <- rna_counts %>% remove_rownames %>% column_to_rownames(var="X")
+statRes_map_noCNV <- statRes_map_noCNV %>% remove_rownames %>% column_to_rownames(var="GeneID")
 rna_counts <- rna_counts[(rownames(rna_counts) %in% rownames(res_allGenes)),]
+statRes_map_noCNV <- cbind(statRes_map_noCNV, cnv)
 
 
 #res_allGenes$GeneID <- rownames(res_allGenes)
@@ -68,11 +70,13 @@ cnv_tumor <- luad_cnv_tumor %>% replace(cnv_tumor, cnv_tumor>5, 6) %>%
   select(1:10) %>%
   remove_rownames %>% column_to_rownames(var="Row.names")
 
-cnv_tumor <- cnv_tumor %>% mutate(cnv_type = ifelse(cnv_mean == 2,"neutral", ifelse(cnv_mean>2, "gain", "loss")))
 
-cnv_normal <- data.frame(s1_normal = rep(1, nrow(cnv_3)), s2_normal = rep(1, nrow(cnv_3)), 
-                         s3_normal = rep(1, nrow(cnv_3)))
-cnv <- cbind(cnv_3, cnv_normal)
+cnv_normal <- data.frame("TCGA-50-5932-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6147-11A" = rep(1, nrow(luad_cnv)),
+                         "TCGA-55-6979-11A" = rep(1, nrow(luad_cnv)), "TCGA-50-5931-11A" = rep(1, nrow(luad_cnv)),
+                         "TCGA-91-6835-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6776-11A" = rep(1, nrow(luad_cnv)),
+                         "TCGA-44-6778-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6145-11A" = rep(1, nrow(luad_cnv)),
+                         "TCGA-50-5939-11A" = rep(1, nrow(luad_cnv)), "TCGA-50-5935-11A" = rep(1, nrow(luad_cnv)))
+cnv <- cbind(luad_cnv, cnv_normal)
 
 #transform log2 ratio to integer
 #round( (2^1.5) * 2)
@@ -82,9 +86,8 @@ log2fc_integer <- function(x){
 cnv_tumor[1:10] <- lapply(cnv_tumor[1:10], FUN = log2fc_integer)
 
 #Metadata generation
-metadata <- data.frame(patID = c("s1_normal", "s2_normal", "s3_normal", 
-                                 "s1_tumor", "s2_tumor", "s3_tumor"), 
-                       condition = rep(c("A", "B"), each = 3)) 
+metadata <- data.frame(patID = colnames(luad_rna), 
+                       condition = rep(c("A", "B"), each = 10)) 
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var="patID")  
 metadata$condition <- as.factor(metadata$condition)
 
@@ -97,7 +100,7 @@ cnv_3 <- cnv_3/2
 #cnv <- cnv %>% cnv[(rownames(cnv %in% rownames(res_allGenes)),] #delete rows by name
 
 cnv <- cnv + 10e-9
-rna_normal_tumor_brca <- rna_normal_tumor_brca * cnv
+rna <- luad_rna * cnv
 
 
 #Making barplot
@@ -124,11 +127,10 @@ load("~/model_data/TCGA/lung_cancer/LUSC/rna_lusc.Rdata")
 cnv <- cnv/2
 cnv <- cnv + 10e-9
 rna_normal <- rna_normal * cnv
-rna_normal <- round(rna_normal, 0)
+#rna_normal <- round(rna_normal, 0)
 
 #Counts normalization
-rna_lusc <- rna_lusc %>% select(5,6,7,15,16,17) 
-rna_normalized <- rna_counts %>%  as.matrix()
+rna_normalized <- luad_rna %>%  as.matrix()
 #rna_normalized <- DESeq2::varianceStabilizingTransformation(rna_normalized)
 rna_log_normalized <- DESeq2::rlog(rna_normalized)
 
@@ -144,11 +146,12 @@ rna_log_normalized <- DESeq2::rlog(rna_normalized)
 
 rna_tum_norm <- cbind(rna_tum, rna_norm)
 
-rna_zscore <- t(scale(t(rna_tum_norm)))
+rna_zscore <- t(scale(t(rna_log_normalized)))
 
-rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(4:6) 
-rna_zscore_normal <- rna_zscore_normal %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(4)
-rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(4)
+rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:10)
+rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% select(11:20) 
+rna_zscore_normal <- rna_zscore_normal %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(11)
+rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(11)
 
 
 #Selecting most variable genes
@@ -161,18 +164,18 @@ rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame %>% mutate(rna_mean = row
 #cnv <- cnv %>% select(5,6,7)
 #cnv <- cnv[(rownames(cnv) %in% rownames(rna_filt)),]
 
-cnv <- cnv_3 %>%
-  mutate(cnv_mean = rowMeans(cnv_3))
+luad_cnv <- luad_cnv %>%
+  mutate(cnv_mean = rowMeans(luad_cnv))
 
-
+cnv <- luad_cnv %>% select(11)
 
 #CNV factorization
 cnv <- cnv %>% 
   mutate(cnv = case_when(
   cnv_mean <= 0.5 ~ "0",
-  cnv_mean > 0.5 & cnv_mean <= 1.5 ~ "1",
-  cnv_mean > 1.5 & cnv_mean < 2.5 ~ "2",
-  cnv_mean >= 2.5 & cnv_mean <= 3.5 ~ "3",
+  cnv_mean > 0.5 & cnv_mean <= 1.6 ~ "1",
+  cnv_mean > 1.6 & cnv_mean <= 2.4 ~ "2",
+  cnv_mean > 2.4 & cnv_mean <= 3.5 ~ "3",
   cnv_mean > 3.5 & cnv_mean <= 4.5 ~ "4",
   cnv_mean > 4.5 ~ "5")) 
 
@@ -186,13 +189,13 @@ cnv <- cnv %>%
   cnv == "5" ~ "cn_amplification"))
 
 #gene group factorization
-res_allGenes <- statRes_map_NOcnv %>% 
+res_noCNV <- res_noCNV %>% 
   mutate(gene_group = case_when(
-    B1_1 < -0.5 & padj_1 <= 0.05 ~ "DEG",
-    B1_1 > 0.5 & padj_1 <= 0.05 ~ "DEG",
-    B1_1 <= 0.5 & B1_1 >= -0.5 ~ "no_DEG",
-    B1_1 >= 0.5 & padj_1 > 0.05 ~ "other",
-    B1_1 <= -0.5 & padj_1 > 0.05 ~ "other"))
+    B1_1 < -0.6 & padj < 0.05 ~ "DEG",
+    B1_1 > 0.6 & padj < 0.05 ~ "DEG",
+    B1_1 <= 0.6 & B1_1 >= -0.6 ~ "noDEG",
+    B1_1 >= 0.6 & padj > 0.05 ~ "not significant",
+    B1_1 <= -0.6 & padj > 0.05 ~ "not significant"))
 
 #Gene group facrorization based on Effect size difference
 deg <- deg %>% 
@@ -219,31 +222,36 @@ rna_zscore_tumor <- rna_zscore_tumor %>% mutate(sample_type = "Tumor")
 rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
 
 
-plot_data_2 <- merge(rna_zscore_normal, cnv, by = "row.names")
+plot_data_2 <- merge(rna_zscore_tumor, cnv, by = "row.names")
 plot_data_2 <- plot_data_2 %>% remove_rownames %>% column_to_rownames(var="Row.names")
-plot_data <- rbind(plot_data_1, plot_data_2)
+plot_data_2$cnv <- as.factor(plot_data_2$cnv)
+plot_data <- rbind(plot_data_2, plot_data_1)
+
 
 #Boxplot
 # Compute summary statistics
-summary.stats <- plot_data %>%
+summary.stats <- plot_data_2 %>%
   group_by(cnv) %>%
   get_summary_stats() %>%
   select(cnv, n)
+summary.stats <- summary.stats[c(1,3,5,7,9),]
 
 summary.plot <- ggsummarytable(
-  summary.stats, x = "CNV group", y = c("n"),
+  summary.stats, x = "cnv", y = c("n"),
   ggtheme = theme_bw()
 )
 summary.plot
 
+
+
 #Create boxplot
-bxp <- ggplot(plot_data, aes(x = group, y = rna_mean, fill = sample_type)) + 
+bxp <- ggplot(plot_data_2, aes(x = cnv, y = rna_mean, fill = cnv)) + 
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch = TRUE)+
-  labs(title="CNV patterns and mRNA expression (BRCA, tumor samples (3))",x="CNV group", y = "mRNA Z-score")+
+  labs(title="CNV patterns and mRNA expression (LUAD)",x="CNV group", y = "mRNA Z-score")+
   theme_classic()
+bxp
 
-
-bxp <- ggplot(plot_data, aes(x = group, y = rna_mean, fill = sample_type)) + 
+bxp <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
   labs(title="CNV patterns and mRNA expression (BRCA, tumor samples (3))",x="CNV group", y = "mRNA Z-score")+
   theme_classic()+
@@ -294,9 +302,9 @@ scatterplot
 #Stacked Barplot
 #sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "Diploid")
 data_barplot <- data.frame(
-  gene_group = rep(c("DEG", "no_DEG", "other"), each = 4),
-  cn_group = rep(c("cn_amplification", "cn_gain", "cn_loss", "diploid"), 3),
-  number_of_genes = c(154, 945, 69, 1799, 596, 4371, 230, 9337, 378, 1857, 123, 3506)
+  gene_group = rep(c("DEG", "no_DEG", "not significant"), each = 4),
+  cn_group = rep(c("cn_loss", "diploid", "cn_gain", "cn_amplificatin"), 3),
+  number_of_genes = c(314, 3977, 3173, 58, 528, 7862, 4981, 46, 85, 1189, 860, 7)
 )
 
 data_barplot_geneDosage <- data.frame(
@@ -307,11 +315,11 @@ data_barplot_geneDosage <- data.frame(
 
 barplot <- ggplot(data_barplot, aes(fill = cn_group, y = number_of_genes, x = gene_group))+
   geom_bar(stat = "identity")+
-  labs(x='Gene group', y='Frequency', title='CNV informed Gene Expression, BRCA (n_genes=23 265)')+
-  scale_fill_manual('Position', values=c('coral2', 'steelblue', 'green', 'red'))+
-  geom_text(aes(gene_group, label = number_of_genes), size = 3, position=position_dodge2(width=0.5))+
+  labs(x='Gene group', y='Frequency', title='CNV informed Gene Expression, LUAD (n_genes=23 080)')+
+  scale_fill_manual('Position', values=c('red', 'pink', 'steelblue', 'jellow'))+
+  #geom_text(aes(gene_group, label = number_of_genes), size = 3, position=position_dodge2(width=0.5))+
   theme_minimal()+
-  facet_wrap("cn_group")+
+  #facet_wrap("cn_group")+
   guides(fill=guide_legend("CN group"))
-barplot
+barplot + scale_fill_brewer(palette = "Set2")
                  

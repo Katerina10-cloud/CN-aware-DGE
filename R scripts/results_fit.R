@@ -1,25 +1,53 @@
 library(ggplot2)
 library(tidyverse)
 
+# Set input path
+path <- "C:/Users/Documents/"
+setwd(path)
+# Import data
+df <- read.csv(paste0(path, ''), row.names = 1)
+
 #Loading the data
-statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
+statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_luad/results_3/statRes_map_noCNV.csv',header=TRUE)
 statRes_map_CNV = read.csv('model_fit_Python/model_results/results_2/statRes_map_CNV.csv',header=TRUE)
 metadata = read.csv('model_fit_Python/model_data/metadata.csv',header=TRUE)
 
-save(rna_cnv, file = "~/model_fit_Python/model_results/results_brca/res_allGenes.Rdata")
+save(res_noCNV, file = "~/model_fit_Python/model_results/results_luad/results_3/res_noCNV.Rdata")
+
+colnames(statRes_map_noCNV)[3] <- "B1_1"
+statRes_map_noCNV <- statRes_map_noCNV %>% select(1,3,7)
+res_noCNV <- res_noCNV %>% remove_rownames %>% column_to_rownames(var="Row.names")
+res_noCNV <- merge(statRes_map_noCNV, cnv, by = "row.names")
 
 #getting DE genes
-sum(statRes_map_NOcnv$padj <= 0.05 & statRes_map_NOcnv$B1_1 > 0.5, na.rm=TRUE) #up_regulated
-sum(statRes_map_NOcnv$padj <= 0.05 & statRes_map_NOcnv$B1_1 > -0.5, na.rm=TRUE) #down-reg
+sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$B1_1 >= 0.6, na.rm=TRUE) #up_regulated
+sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$B1_1 <= -0.6, na.rm=TRUE) #down-reg
 
 sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
-sum(res_allGenes$gene_group == "other" & res_allGenes$cn_group == "diploid", na.rm=TRUE)
+sum(res_noCNV$gene_group == "not significant" & res_noCNV$cn_group == "cn_amplification", na.rm=TRUE)
 sum(deg$gene_group == "dosage-insensitive" & deg$cnv == "5", na.rm=TRUE)
 
 
-deg_up <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 > 0.5)
-deg_down <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 < -0.5)
-deg <- rbind(deg_up, deg_down)
+# Volcano Plot
+# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
+statRes_map_noCNV$diffexpressed <- "NO"
+statRes_map_noCNV$diffexpressed[statRes_map_noCNV$B1_1 >= 0.6 & statRes_map_noCNV$padj < 0.05] <- "UP"
+statRes_map_noCNV$diffexpressed[statRes_map_noCNV$B1_1 <= -0.6 & statRes_map_noCNV$padj < 0.05] <- "DOWN"
+
+ggplot(data = statRes_map_noCNV, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("#00AFBB", "grey", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
+  scale_x_continuous(breaks = seq(-8, 12, 2))+
+  labs(title="Tumor vs Normal DGE (LUAD, n_genes=23 080, DEG=32%)",x="Effect size (B1_1)")+
+  theme_classic()
+
+
+
+#deg_up <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 > 0.5)
+#deg_down <- subset(statRes_map_NOcnv, statRes_map_NOcnv$padj_1 <= 0.05 & statRes_map_NOcnv$B1_1 < -0.5)
+#deg <- rbind(deg_up, deg_down)
 
 #colnames(deg_up)[2] <- "padj_1"
 #deg_up_cnv <- deg_up_cnv %>% mutate(genes = "up")
@@ -30,12 +58,12 @@ deg <- rbind(deg_up, deg_down)
 #statRes_map_CNV <- statRes_map_CNV %>% remove_rownames %>% column_to_rownames(var="GeneID")
 #deg_down_cnv <- deg_down_cnv[(rownames(deg_down_cnv) %in% rownames(deg_down)),] #delete rows by name
 #deg_down_cnv <- deg_down_cnv %>% select(2,6)
+
 deg_up_merged <- deg_up_merged %>% mutate(Difference = B1_2-B1_1)
 
 save(deg_up_cnv, file = "model_fit_Python/model_results/deg_up_cnv.Rdata")
 write.csv(rna_cnv_2test, file = "model_data/TCGA/lung_cancer/last_test/rna_cnv_2test.csv")
 
-deg_merged <- deg_merged %>% mutate(difference = B1_2-B1_1)
 
 #Data manipulation and cleaning
 resFit_merged <- cbind(statRes_map_noCNV, statRes_map_CNV) %>% 
@@ -51,21 +79,13 @@ cnv_sd <- transform(cnv_filtered, sd=apply(cnv_filtered, 1, sd, na.rm=TRUE)) %>%
   select(1,3,5:10)
 
 
-rna_lusc %>% select(1,3,5:10,11,13,15:20) %>% 
-  rna_lusc[(rownames(rna_lusc) %in% rownames(cnv_sd)),] #delete rows by name
-
 cnv_2 <- cnv %>% select(11:20)
-cnv_1 <- cnv_1/2
+luad_cnv <- luad_cnv/2
 cnv <- cbind(cnv_1, cnv_2)
-
-deg <- deg %>% remove_rownames %>% column_to_rownames(var="Row.names")
-
-#write.csv(rna_lusc, file="model_fit_Python/model_data/test2/rna_lusc.csv")
 
 
 deg_down <- deg_down %>% add_column(Group = "B1_1")
 resFit_CNV <- resFit_CNV %>% add_column(Group = "B1_2")
-
 resFit_plot <- rbind(resFit_noCNV, resFit_CNV)
 
 
@@ -138,28 +158,10 @@ resFit_2 %>%
   scale_x_continuous(breaks = c(seq(-10, 10, 1)),       
                      limits = c(-8, 10))  
 
-#Volcano plot
 
-library(EnhancedVolcano)
-p2 <- EnhancedVolcano(resFit_CNV,
-                lab = rownames(resFit_CNV),
-                x = 'B1',
-                y = 'padj',
-                title = 'Tumor vs Control (LUSC, CNV)',
-                subtitle = "",
-                selectLab = c(''),
-                legendLabSize = 8.0,
-                pCutoff = 0.05,
-                FCcutoff = 1.0,
-                pointSize = 1.5,
-                labSize = 2.0,
-                col=c('black', 'black', 'black', 'red3'),
-                colAlpha = 1)
-
-library(gridExtra)
-library(grid)
-
-grid.arrange(p1, p2, ncol=2)
+#library(gridExtra)
+#library(grid)
+#grid.arrange(p1, p2, ncol=2)
 
 data_barplot_geneDosage <- data.frame(
   gene_group = rep(c("super-dosage", "d-sensitive", "d-insensitive"), each = 6),

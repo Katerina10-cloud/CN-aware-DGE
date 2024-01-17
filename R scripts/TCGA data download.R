@@ -337,17 +337,24 @@ rna_tum <- rna_tum[(rownames(rna_tum) %in% rownames(res_allGenes)),]
 
 
 #Filtering low counts genes
-rna_normal_tumor_brca <- rna_normal_tumor_brca[which(rowSums(rna_normal_tumor_brca)>10),]
-rna_normal_tumor_brca <- rna_normal_tumor_brca[(rownames(rna_normal_tumor_brca) %in% rownames(cnv_3)),] #delete rows by name
+luad_rna <- luad_rna[which(rowSums(luad_rna)>100),]
+luad_cnv_tumor <- luad_cnv_tumor[(rownames(luad_cnv_tumor) %in% rownames(luad_rna)),] #delete rows by name
 
-save(rna_normal_tumor_brca, file = "~/model_data/TCGA/breast_cancer/rna_normal_tumor_brca.Rdata")
-write.csv(metadata, "~/model_data/TCGA/breast_cancer/metadata.csv")
+luad_cnv <- luad_cnv %>% select(1)
+luad_cnv <- merge(luad_cnv, luad_cnv_tumor, by = "row.names")
 
-rna_normal_tumor_brca <- rna_normal_tumor_brca %>% remove_rownames %>% column_to_rownames(var="Row.names")
-rna_normal <- rna_normal_tumor %>% select(1:46)
-rna_tumor <- rna_normal_tumor %>% select(47:92)
-cnv_tumor_3 <- luad_cnv_tumor %>% select(8,16,27)
-rna_normal_tumor_3 <- rna_normal_tumor %>% as.data.frame() %>% select(8,16,27,54,62,73)
-rna_normal_3 <- rna_normalized_normal %>% as.data.frame() %>% select(8,16,27)
-rna_3 <- cbind(rna_tumor_3, rna_normal_3)
+
+save(luad_cnv, file = "~/model_data/TCGA/lung_cancer/LUAD/cnv_luad_10.Rdata")
+write.csv(metadata, "~/model_data/TCGA/lung_cancer/LUAD/metadata.csv")
+
+#luad_cnv <- luad_cnv %>% remove_rownames %>% column_to_rownames(var="Row.names")
+#luad_cnv <- luad_cnv[,-1]
+#colnames(luad_cnv)[1] <- "TCGA-50-5932"
+
+luad_cnv_tumor <- luad_cnv_tumor %>% select(1, 3, 4, 5, 7, 12, 18, 19, 28, 29)
+luad_rna_norm <- luad_rna_norm %>%  select(1, 3, 4, 5, 7, 13, 19, 20, 29, 30)
+luad_rna <- cbind(luad_rna_norm, luad_rna_tum)
+#cnv_tumor_3 <- luad_cnv_tumor %>% select(8,16,27)
+
+
 
