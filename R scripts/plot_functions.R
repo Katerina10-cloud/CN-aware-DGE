@@ -1,4 +1,6 @@
 #Plots
+library(ggplot2)
+library(ggpubr)
 
 #Making barplot
 #row.names(cnv) <- 1:nrow(cnv) cnv[1:3]
@@ -125,18 +127,50 @@ barplot + scale_fill_brewer(palette = "Set2")
 
 # Volcano Plot
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
-statRes_map_noCNV$diffexpressed <- "NO"
-statRes_map_noCNV$diffexpressed[statRes_map_noCNV$B1_1 >= 0.6 & statRes_map_noCNV$padj < 0.05] <- "UP"
-statRes_map_noCNV$diffexpressed[statRes_map_noCNV$B1_1 <= -0.6 & statRes_map_noCNV$padj < 0.05] <- "DOWN"
+colnames(res_sint_cnv_heterog)[3] <- "B1_2"
+res_sint_cnv_heterog$diffexpressed <- "NO"
+res_sint_cnv_heterog$diffexpressed[res_sint_cnv_heterog$B1_1 >= 0.6 & res_sint_cnv_heterog$padj < 0.05] <- "UP"
+res_sint_cnv_heterog$diffexpressed[res_sint_cnv_heterog$B1_1 <= -0.6 & res_sint_cnv_heterog$padj < 0.05] <- "DOWN"
 
-ggplot(data = statRes_map_noCNV, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+ggplot(data = res_sint_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
-  geom_point(size = 1) +
-  scale_color_manual(values = c("#00AFBB", "grey", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
-  scale_x_continuous(breaks = seq(-8, 12, 2))+
-  labs(title="Tumor vs Normal DGE (LUAD, n_genes=23 080, DEG=32%)",x="Effect size (B1_1)")+
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
+  scale_x_continuous(breaks = seq(-14, 10, 2))+
+  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_1)")+
   theme_classic()
+
+ggplot(data = res_sint_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
+  scale_x_continuous(breaks = seq(-14, 10, 2))+
+  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_2)")+
+  theme_classic()
+
+ggplot(data = res_sint_nocnv_heterog, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
+  scale_x_continuous(breaks = seq(-14, 10, 2))+
+  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_1)")+
+  theme_classic()
+
+ggplot(data = res_sint_control, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
+  scale_x_continuous(breaks = seq(-14, 10, 2))+
+  labs(title="Normal_1 vs Normal_2 (BRCA, sample size = 100)",x="Effect size (B1_1)")+
+  theme_classic()
+
+
+ggarrange(
+  plot_1, plot_2, plot_3, plot_4, ncol = 4)
 
 #Density plot
 
