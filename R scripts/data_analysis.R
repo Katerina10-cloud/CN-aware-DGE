@@ -1,40 +1,31 @@
 # RNA vs CNV analysis
 
 library(ggplot2)
+library(cowplot)
 library(tidyverse)
 library(rstatix)
 library(ggpubr)
 library(DESeq2)
 
 #Exploration of CNV and RNAseq data 
+#Load datasets
+#load("../data/patMeta_enc.RData")
+#source("../code/utils.R")
 statRes_map_CNV = read.csv('~/model_fit_Python/model_results/results_luad/results_3/statRes_map_CNV.csv',header=TRUE)
 statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
-rna_normal = read.csv('~/model_fit_Python/model_data/test_norm_46_luad/metadata.csv',header=TRUE)
+res_nocnv2 = read.csv('~/model_fit_Python/model_results/results_sinthetic_brca/heterog_cnv/res_sint_nocnv.csv',header=TRUE)
 rna_normal = read.csv('~/model_data/TCGA/breast_cancer/sinthetic_data/rna_normal.csv',header=TRUE)
 
-cnv_tumor <- brca_cnv_tumor %>% select(1:100)
-cnv <- cnv %>% remove_rownames %>% column_to_rownames(var="Row.names")
-cnv_tumor <- cnv_tumor[(rownames(cnv_tumor) %in% rownames(rna_normal)),]
+#Data preprocessing
+cnv_tumor <- cnv_tumor %>% remove_rownames %>% column_to_rownames(var="Row.names")
+rna_norm <- rna_norm[(rownames(rna_norm) %in% rownames(cnv_tumor)),]
 res_rna_cnv <- res_rna_cnv %>% relocate(padj_2, .after = padj_1)
-cnv <- cnv[,-1]
 
-cnv_tumor <- cnv_tumor %>% select(51:100)
-cnv <- merge(rna_n, cnv_tumor, by = "row.names")
 cnv_tumor <- replace(cnv, cnv>5, 5)
-rna_norm_tum <- cbind(rna_normal, rna_tumor)
 
-#res_allGenes$GeneID <- rownames(res_allGenes)
-#res_allGenes <- res_allGenes %>% mutate(difference = B1_2 - B1_1)
-#cnv <- cnv[(rownames(cnv) %in% rownames(res_allGenes)),]
-#cnv <- cnv %>% mutate(cnv_mean = rowMeans(cnv))
-#rna_tumor = read.delim("model_data/TCGA/lung_cancer/LUSC/s1/s1_rna_tumor.tsv", header=TRUE, sep="\t")
-#rna <- read.delim("~/model_data/TCGA/lung_cancer/LUSC/s10/s10_rna_tumor.tsv", header=TRUE, sep="\t")
-#cnv_brca <- brca_cnv_tumor %>% select(7:10, 13, 14, 18, 19, 22, 23, 25:27, 29, 34, 35, 37, 41, 45, 47, 49, 53, 54, 56:58, 61, 62, 64, 69, 72, 73, 76, 83, 90, 92:96, 102, 107, 109)
-#cnv_3 <- cnv_brca %>% select(23,24,36)
-#rna_norm_3 <- brca_rna_norm %>% select(55,57,93)
-#rna_tum_3 <- brca_rna_tum %>% select(55,57,92)
-save(rna, file = "~/model_data/TCGA/lung_cancer/sinthetic data/rna.Rdata")
-write.csv(rna_cnv, file = "~/model_data/TCGA/breast_cancer/sinthetic_data/heterog_cnv/rna_cnv.csv")
+#Data save
+save(p6, file = "~/model_fit_Python/model_results/results_sinthetic_brca/p6.Rdata")
+write.csv(rna_cnv, file = "~/model_fit_Python/model_data/test_tum_vs_norm_46/rna_cnv.csv")
 
 #Data manipulation and cleaning
 stat_res_luad <- stat_res_luad %>% mutate(difference = B1_2 - B1_1)
@@ -43,43 +34,37 @@ resFit_merged <- cbind(statRes_map_noCNV, statRes_map_CNV) %>%
   select() %>% 
   mutate(Difference = B1_2-B1_1) %>% 
   relocate(B0_2, .before = B1_2) %>% 
-  remove_rownames %>% column_to_rownames(var="GeneID")
+  column_to_rownames(var="GeneID")
 
 rna_tumor <- rna_tumor %>% select(2,4) %>% na.omit() %>% 
   colnames(rna_tumor)[2] <- "s1_tumor" %>% 
   rna_tumor[!duplicated(rna_tumor$GeneID), ] %>% #remove dublicates 
-  remove_rownames %>% column_to_rownames(var="GeneID") 
+  column_to_rownames(var="GeneID") 
 
 rna_normal <- rna_normal %>% select(2,4) %>% na.omit() %>% 
   colnames(rna_normal)[2] <- "s1_tumor" %>% 
   rna_normal[!duplicated(rna_normal$GeneID), ] %>% #remove dublicates
-  remove_rownames %>% column_to_rownames(var="GeneID")
+  column_to_rownames(var="GeneID")
 
 cnv_tumor <- luad_cnv_tumor %>% replace(cnv_tumor, cnv_tumor>5, 6) %>% 
   mutate(cnv_mean = rowMeans(cnv_tumor)) %>% 
   subset(cnv_tumor, cnv_mean <= 0.9 | cnv_mean >= 1.5) %>% 
   select(1:10) %>%
-  remove_rownames %>% column_to_rownames(var="Row.names")
-
-cnv_normal <- data.frame("TCGA-50-5932-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6147-11A" = rep(1, nrow(luad_cnv)),
-                         "TCGA-55-6979-11A" = rep(1, nrow(luad_cnv)), "TCGA-50-5931-11A" = rep(1, nrow(luad_cnv)),
-                         "TCGA-91-6835-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6776-11A" = rep(1, nrow(luad_cnv)),
-                         "TCGA-44-6778-11A" = rep(1, nrow(luad_cnv)), "TCGA-44-6145-11A" = rep(1, nrow(luad_cnv)),
-                         "TCGA-50-5939-11A" = rep(1, nrow(luad_cnv)), "TCGA-50-5935-11A" = rep(1, nrow(luad_cnv)))
+  column_to_rownames(var="Row.names")
 
 #Metadata generation
 rna_nor <- rna_normal %>% gsub("-", ".", rna_normal)
 metadata <- data.frame(patID = colnames(rna_norm_tum), 
-                       condition = rep(c("A", "B"), each = 50)) 
+                       condition = rep(c("A", "B"), each = 45)) 
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var="patID")  
 metadata$condition <- as.factor(metadata$condition)
 all.equal(colnames(),rownames())
 
 #Generating simulated data
 #starting from normal mRNA counts
+rna_norm_tum <- cbind(brca_rna_norm, brca_cnv_tumor)
 # remove genes with low counts
-rna_normal <- rna_normal[rowSums(rna_normal) > 400,]
-
+rna_norm_tum <- rna_norm_tum[rowSums(rna_norm_tum) > 500,] 
 
 rna_norm <- rna %>% select(1:50)
 rna_tum <- rna %>%  select(51:100)
@@ -101,24 +86,20 @@ rna_normal <- rbind(group1, group2, group3, group4, group5)
 rna_tumor <- rna_tumor[(rownames(rna_tumor) %in% rownames(rna_normal)),]
 rna_norm_tum <- cbind(rna_norm, rna_tum)
 
+rna_norm <- rna_norm_tum %>% select(1:110)
 colnames(cnv_norm) <- colnames(rna_norm)
 rownames(cnv_norm) <- rownames(rna_norm)
 
-cnv_norm <- matrix(1, nrow(rna_tum), 50)
+cnv_norm <- matrix(1, nrow(rna_norm), 45)
 cnv <- cbind(cnv_tumor, cnv_norm)
-cnv <- cbind(cnv_tum, cnv_norm)
+
 
 #Correction of normal RNAseq counts for CNV
-cnv_tum <- cnv
-cnv_tumor <- cnv_tumor/2
-rna_tum <- rna_tum * cnv_tumor
+cnv_tumor <- cnv_tumor/2   
 cnv <- cnv + 10e-9
 rna_tumor <- rna_tumor * cnv_tum
 rna_cnv <- rna_norm_tum * cnv
 
-#Counts normalization
-load("~/model_data/TCGA/lung_cancer/LUSC/cnv_lusc.Rdata")
-load("~/model_data/TCGA/lung_cancer/LUSC/rna_lusc.Rdata")
 
 #Counts normalization
 rna_normalized <- luad_rna %>%  as.matrix()
@@ -128,11 +109,14 @@ rna_log_normalized <- DESeq2::rlog(rna_normalized)
 rna_zscore <- t(scale(t(rna_log_normalized)))
 rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:10)
 rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% select(11:20) 
-rna_zscore_normal <- rna_zscore_normal %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(11)
-rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame %>% mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(11)
+rna_zscore_normal <- rna_zscore_normal %>% as.data.frame() %>%
+  mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(11)
+rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame() %>% 
+  mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(11)
 
 luad_cnv <- luad_cnv %>%
   mutate(cnv_mean = rowMeans(luad_cnv))
+
 
 #CNV factorization
 cnv <- cnv %>% 
