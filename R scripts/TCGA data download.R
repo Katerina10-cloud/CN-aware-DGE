@@ -1,3 +1,4 @@
+#loading libraries
 #BiocManager::install("TCGAbiolinks")
 library(TCGAbiolinks)
 library(tidyverse)
@@ -81,7 +82,7 @@ query_TCGA_cnv <- GDCquery(project = 'TCGA-LUAD',
 output_query_TCGA <- getResults(query_TCGA_cnv)
 
 
-#build a query to retrieve gene expression data
+#build a query to retrieve Tumor gene expression data
 query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                        data.category = 'Transcriptome Profiling',
                        experimental.strategy = 'RNA-Seq',
@@ -91,7 +92,7 @@ query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                        access = 'open',
                        barcode = luad_rna_tumor)
 
-#build a query to retrieve gene expression data
+#build a query to retrieve Normal gene expression data
 query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                            data.category = 'Transcriptome Profiling',
                            experimental.strategy = 'RNA-Seq',
@@ -100,10 +101,10 @@ query_TCGA_rna <- GDCquery(project = 'TCGA-LUAD',
                            sample.type = "Solid Tissue Normal",
                            access = 'open',
                            barcode = luad_rna_normal)
-
+#download data
 GDCdownload(query_TCGA_rna)
 
-#clinical data
+#clinical data download 
 barcode_tumor <- c("TCGA-50-5932", "TCGA-49-6742", "TCGA-44-6147-", "TCGA-55-6979", "TCGA-50-5931", 
                    "TCGA-38-4626", "TCGA-91-6835", "TCGA-49-4490", "TCGA-55-6970", "TCGA-55-6969", 
                    "TCGA-91-6831", "TCGA-50-5936", "TCGA-44-6776", "TCGA-55-6978", "TCGA-49-6744", 
@@ -239,7 +240,7 @@ brca_cnv_list <- c("TCGA-E9-A1RH-01A-21D-A166-01", "TCGA-BH-A1ET-01A-11D-A134-01
                    "TCGA-BH-A1EO-01A-11D-A134-01", "TCGA-E9-A1RC-01A-11D-A160-01",
                    "TCGA-BH-A0DZ-01A-11D-A011-01", "TCGA-BH-A0DV-01A-21D-A12N-01")
   
-
+#Query for gene expression data
 query_TCGA_normal <- GDCquery(project = 'TCGA-BRCA',
                        data.category = 'Transcriptome Profiling',
                        experimental.strategy = 'RNA-Seq',
@@ -249,6 +250,7 @@ query_TCGA_normal <- GDCquery(project = 'TCGA-BRCA',
                        sample.type = "Solid Tissue Normal")
                        #barcode = brca_rna_tumor
 
+#Query for CNV
 query_TCGA_cnv <- GDCquery(project = 'TCGA-BRCA',
                            data.category = 'Copy Number Variation',
                            #sample.type = "Primary Tumor",
@@ -269,7 +271,6 @@ luad_cnv_tumor <- assay(luad_cnv, 'copy_number', rownames = TRUE)
 luad_rna_normal <- GDCprepare(query_TCGA_rna, summarizedExperiment = TRUE)
 luad_rna_norm <- assay(luad_rna_normal, 'unstranded', rownames = TRUE)
 
-
 gene_name <- as.data.frame(luad_rna_normal@rowRanges@elementMetadata@listData[["gene_name"]]) 
 colnames(gene_name)[1] <- "GeneID"
 luad_rna_norm <- as.data.frame(luad_rna_norm)
@@ -277,6 +278,7 @@ luad_rna_norm <- cbind(gene_name, luad_rna_norm)
 luad_rna_norm <- luad_rna_norm[!duplicated(luad_rna_norm$GeneID), ] %>% remove_rownames %>% column_to_rownames(var="GeneID")
 luad_cnv_tumor <- na.omit(luad_cnv_tumor)
 
+#substring columns
 colnames(brca_rna_norm) <- substr(colnames(brca_rna_norm), 1, 16)
 
 save(brca_rna_norm, file = '~/model_data/TCGA/breast_cancer/data/brca_rna_norm.Rdata')
@@ -320,9 +322,6 @@ clinical_brca <- GDCprepare_clinic(clinical_brca, clinical.info = "patient")
 clinical_brca <- clinical_brca %>% select(1,6,22,107)
 save(clinical_brca, file = "~/model_data/TCGA/breast_cancer/data/clinical_brca.Rdata")
 
-#common_cols <- intersect(colnames(luad_rna_normal), colnames(luad_rna_tumor))
-#luad_rna_norm <- luad_rna_norm[, c(-8,-14,-28,-30,-32,-33,-39,-40,-42,-47,-55,-57,-58)]
-
 rna_tum <- luad_rna_tum %>% select(8,16,27)
 colnames(rna_norm) <- c('s8_normal', 's16_normal', 's27_normal')
 colnames(rna_tum) <- c('s8_tumor', 's16_tumor', 's27_tumor')
@@ -338,23 +337,7 @@ rna_tum <- rna_tum[(rownames(rna_tum) %in% rownames(res_allGenes)),]
 
 #Filtering low counts genes
 luad_rna <- luad_rna[which(rowSums(luad_rna)>100),]
-luad_cnv_tumor <- luad_cnv_tumor[(rownames(luad_cnv_tumor) %in% rownames(luad_rna)),] #delete rows by name
-
-luad_cnv <- luad_cnv %>% select(1)
-luad_cnv <- merge(luad_cnv, luad_cnv_tumor, by = "row.names")
-
-
-save(luad_cnv, file = "~/model_data/TCGA/lung_cancer/LUAD/cnv_luad_10.Rdata")
-write.csv(metadata, "~/model_data/TCGA/lung_cancer/LUAD/metadata.csv")
-
-#luad_cnv <- luad_cnv %>% remove_rownames %>% column_to_rownames(var="Row.names")
-#luad_cnv <- luad_cnv[,-1]
-#colnames(luad_cnv)[1] <- "TCGA-50-5932"
-
-luad_cnv_tumor <- luad_cnv_tumor %>% select(1, 3, 4, 5, 7, 12, 18, 19, 28, 29)
-luad_rna_norm <- luad_rna_norm %>%  select(1, 3, 4, 5, 7, 13, 19, 20, 29, 30)
-luad_rna <- cbind(luad_rna_norm, luad_rna_tum)
-#cnv_tumor_3 <- luad_cnv_tumor %>% select(8,16,27)
+luad_cnv_tumor <- luad_cnv_tumor[(rownames(luad_cnv_tumor) %in% rownames(luad_rna)),] #delete rows by nam
 
 
 
