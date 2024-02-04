@@ -9,7 +9,7 @@ df <- data.frame(dge_groups=rep(c("DEG", "DEG_CNV"), each=3),
                  gene_groups=rep(c("up_gains", "down_loss", "neutral_cnv"),2),
                  frequency=c(4.6, 13.0, 60.6, 13.2, 3.7, 8.4))
 
-plot_1 <- ggplot(data=df, aes(x=gene_groups, y=frequency, fill=dge_groups)) +
+plot <- ggplot(data=df, aes(x=gene_groups, y=frequency, fill=dge_groups)) +
   geom_bar(stat="identity")+
   geom_text(aes(y=frequency, label=frequency), vjust=1.6, 
             color="black", size=3.5)+
@@ -18,19 +18,20 @@ plot_1 <- ggplot(data=df, aes(x=gene_groups, y=frequency, fill=dge_groups)) +
   theme_minimal()
 
 
-plot_data_1 <- deg_b1 %>% mutate(effect_size = "B1_1")
-plot_data_2 <- deg_b2 %>% mutate(effect_size = "B1_2")
-plot_data <- rbind(plot_data_1, plot_data_2)
-
+#preparing data for boxplot
 rna_zscore_tumor <- rna_zscore_tumor %>% mutate(sample_type = "Tumor")
 rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
 
-plot_data_2 <- merge(rna_zscore_tumor, cnv, by = "row.names")
-plot_data_2 <- plot_data_2 %>% remove_rownames %>% column_to_rownames(var="Row.names")
+plot_data_1 <- cbind(rna_zscore_normal, cnv)  
+plot_data_1$cnv <- as.factor(plot_data_1$cnv)
+
+plot_data_2 <- cbind(rna_zscore_tumor, cnv) 
 plot_data_2$cnv <- as.factor(plot_data_2$cnv)
-plot_data <- rbind(plot_data_2, plot_data_1)
+plot_data <- rbind(plot_data_1, plot_data_2)
+
 
 #Boxplot
+
 # Compute summary statistics
 summary.stats <- plot_data_2 %>%
   group_by(cnv) %>%
@@ -46,48 +47,45 @@ summary.plot
 
 
 #Create boxplot
-bxp <- ggplot(plot_data_2, aes(x = cnv, y = rna_mean, fill = cnv)) + 
+# The palette with grey:
+cbPalette <- c("#0072B2", "#D55E00", "#999999", "#E69F00", "#CC79A7", "#D55E00")
+
+bxp1 <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = cnv)) + 
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch = TRUE)+
   labs(title="CNV patterns and mRNA expression (LUAD)",x="CNV group", y = "mRNA Z-score")+
   theme_classic()
-bxp
+bxp1 <- bxp + scale_fill_manual(values=cbPalette)+
+  font("xy.text", size = 18, color = "black", face = "bold")+
+  font("title", size = 18, color = "black", face = "bold.italic")+
+  font("xlab", size = 16)+
+  font("ylab", size = 16)
+bxp1
 
-bxp <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
+#Comparison boxplot Tumor vs Normal
+bxp2 <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
-  labs(title="CNV patterns and mRNA expression (BRCA, tumor samples (3))",x="CNV group", y = "mRNA Z-score")+
-  theme_classic()+
-  facet_wrap(~sample_type, ncol=6)
-bxp
+  labs(title="CNV patterns and mRNA expression (LUAD)",x="CNV group", y = "mRNA Z-score")+
+  #theme_classic()+
+  facet_wrap(~sample_type, ncol=5)
+bxp2
 
 ggarrange(
   bxp, summary.plot, ncol = 1, align = "v",
   heights = c(0.80, 0.20)
 )
 
-#Comparison boxplot
-ggplot(plot_data, aes(x = effect_size, y = B1, fill = effect_size)) + 
-  geom_boxplot(position = position_dodge()) +
-  labs(title="CNV patterns and effect size (DEG (3482), Tumor vs Normal)",x="CNV group", y = "B1")+
-  facet_wrap(~group, ncol=6) +
-  theme_classic()
-
-#Comparison boxplot
-ggplot(plot_data, aes(x = sample_type, y = rna_mean, fill = sample_type)) + 
-  geom_boxplot(position = position_dodge()) +
-  labs(title="CNV patterns and mRNA expression (LUAD,Tumor vs Normal)",x="CNV group", y = "mRNA Z-score")+
-  facet_wrap(~cnv, ncol=6) +
-  theme_classic()
-
-#load("~/model_fit_Python/model_results/lusc_fit/")
-
 #Violin plot
 violin_plot <- ggplot(deg, aes(x = cnv, y = difference, fill = cnv))+
   geom_violin(trim=FALSE)+
   #geom_jitter(shape=10, position=position_jitter(0.1))+
-  labs(title="CNV patterns and Effect size difference ((|B1_2| - |B1_1|), (n = 7522 genes))",x="CNV group", y = "Effect size difference (log2FC)")+
+  labs(title="CNV patterns and Effect size difference (|B1_2| - |B1_1|)",x="CNV group", y = "Effect size difference (log2)")+
   geom_hline(yintercept = 0, linetype='dashed', color='blue')+
   geom_boxplot(width=0.1)+
-  theme_classic()
+  #theme_classic()
+  theme(legend.position="none")+
+  font("xy.text", size = 16, color = "black", face = "bold")+
+  font("xlab", size = 16)+
+  font("ylab", size = 16)
 violin_plot  
 
 #Scatter plot
@@ -126,51 +124,105 @@ barplot + scale_fill_brewer(palette = "Set2")
 
 
 # Volcano Plot
+library(gridExtra)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
-colnames(res_sint_cnv_heterog)[3] <- "B1_2"
-res_sint_cnv_heterog$diffexpressed <- "NO"
-res_sint_cnv_heterog$diffexpressed[res_sint_cnv_heterog$B1_1 >= 0.6 & res_sint_cnv_heterog$padj < 0.05] <- "UP"
-res_sint_cnv_heterog$diffexpressed[res_sint_cnv_heterog$B1_1 <= -0.6 & res_sint_cnv_heterog$padj < 0.05] <- "DOWN"
+colnames(res_nocnv2)[3] <- "B1_1"
+colnames(res_cnv2)[3] <- "B1_2"
+res_nocnv2$diffexpressed <- "NO"
+res_nocnv2$diffexpressed[res_nocnv2$B1_1 >= 0.6 & res_nocnv2$padj < 0.05] <- "UP"
+res_nocnv2$diffexpressed[res_nocnv2$B1_1 <= -0.6 & res_nocnv2$padj < 0.05] <- "DOWN"
 
-ggplot(data = res_sint_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+#Make simple graphics
+p1 <- ggplot(data = res_nocnv1, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
-  scale_x_continuous(breaks = seq(-14, 10, 2))+
-  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_1)")+
-  theme_classic()
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p1
 
-ggplot(data = res_sint_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
+p2 <- ggplot(data = res_cnv1, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
-  scale_x_continuous(breaks = seq(-14, 10, 2))+
-  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_2)")+
-  theme_classic()
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p2
 
-ggplot(data = res_sint_nocnv_heterog, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+p3 <- ggplot(data = res_nocnv2, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
-  scale_x_continuous(breaks = seq(-14, 10, 2))+
-  labs(title="Tumor vs Normal (BRCA, sample size = 100)",x="Effect size (B1_1)")+
-  theme_classic()
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p3
 
-ggplot(data = res_sint_control, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+p4 <- ggplot(data = res_cnv2, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"), labels = c("Down-regulated", "Not significant", "Up-regulated"))+
-  scale_x_continuous(breaks = seq(-14, 10, 2))+
-  labs(title="Normal_1 vs Normal_2 (BRCA, sample size = 100)",x="Effect size (B1_1)")+
-  theme_classic()
+  scale_color_manual(values = c("black", "#00AFBB", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-10, 10, 4))+
+  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p4
 
+p5 <- ggplot(data = stat_res_luad, aes(x = B1_1, y = -log10(padj_1), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-10, 10, 4))+
+  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p5
 
-ggarrange(
-  plot_1, plot_2, plot_3, plot_4, ncol = 4)
+#delete rows by name
+stat_res_luad <- stat_res_luad[!(row.names(stat_res_luad) %in% c("NXPH3")),]
+
+p6 <- ggplot(data = stat_res_luad, aes(x = B1_2, y = -log10(padj_2), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_x_continuous(breaks = seq(-10, 10, 4))+
+  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  theme(legend.position="none")+
+  #theme_minimal()+
+  font("xy.text", size = 14, color = "black", face = "bold")+
+  font("xlab", size = 14)+
+  font("ylab", size = 14)
+p6
+
+#Plots
+grid.arrange(p1, p2, p3, p4, p5, p6, nrow = 3)
+#grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
 #Density plot
 
