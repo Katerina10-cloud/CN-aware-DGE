@@ -75,18 +75,31 @@ ggarrange(
 )
 
 #Violin plot
-violin_plot <- ggplot(deg, aes(x = cnv, y = difference, fill = cnv))+
+plot_1 <- ggplot(deg, aes(x = cnv, y = difference, fill = cnv))+
   geom_violin(trim=FALSE)+
   #geom_jitter(shape=10, position=position_jitter(0.1))+
-  labs(title="CNV patterns and Effect size difference (|B1_2| - |B1_1|)",x="CNV group", y = "Effect size difference (log2)")+
+  labs(title="Copy-number-informed DEG (n=7522)",x="CN group", y = "Effect size difference (log2)")+
   geom_hline(yintercept = 0, linetype='dashed', color='blue')+
   geom_boxplot(width=0.1)+
-  #theme_classic()
+  theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 16, color = "black", face = "bold")+
-  font("xlab", size = 16)+
-  font("ylab", size = 16)
-violin_plot  
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
+
+plot_2 <- ggplot(genes_cnvReg, aes(x = cnv, y = difference, fill = cnv))+
+  geom_violin(trim=FALSE)+
+  #geom_jitter(shape=10, position=position_jitter(0.1))+
+  labs(title="Copy-number regulated genes (n=1309)",x="CN group", y = "Effect size difference (log2)")+
+  geom_hline(yintercept = 0, linetype='dashed', color='blue')+
+  geom_boxplot(width=0.1)+
+  theme_bw()+
+  theme(legend.position="none")+
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
+
+grid.arrange(barplot, plot_1, plot_2, nrow = 1)
 
 #Scatter plot
 scatterplot <- ggplot(res_allGenes, aes(x=cnv_mean, y=difference)) + 
@@ -112,112 +125,117 @@ data_barplot_geneDosage <- data.frame(
   number_of_genes = c(8, 26, 30, 16, 33, 139, 0, 34, 544, 203, 204, 13, 1, 0, 1225, 483, 6, 2)
 ) 
 
-barplot <- ggplot(data_barplot, aes(fill = cn_group, y = number_of_genes, x = gene_group))+
+barplot <- ggplot(data_barplot, aes(y = number_of_genes, x = gene_group, fill = cn_group))+
   geom_bar(stat = "identity")+
-  labs(x='Gene group', y='Frequency', title='CNV informed Gene Expression, LUAD (n_genes=23 080)')+
-  scale_fill_manual('Position', values=c('red', 'pink', 'steelblue', 'jellow'))+
+  labs(x='Gene group', y='Frequency', title='CN-informed Gene Expression, LUAD (n=23 080)')+
+  scale_fill_brewer(palette="")+
   #geom_text(aes(gene_group, label = number_of_genes), size = 3, position=position_dodge2(width=0.5))+
-  theme_minimal()+
+  theme_bw()+
   #facet_wrap("cn_group")+
-  guides(fill=guide_legend("CN group"))
-barplot + scale_fill_brewer(palette = "Set2")
-
+  guides(fill=guide_legend("CN group"))+
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
+barplot
 
 # Volcano Plot
 library(gridExtra)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
-colnames(res_nocnv2)[3] <- "B1_1"
-colnames(res_cnv2)[3] <- "B1_2"
-res_nocnv2$diffexpressed <- "NO"
-res_nocnv2$diffexpressed[res_nocnv2$B1_1 >= 0.6 & res_nocnv2$padj < 0.05] <- "UP"
-res_nocnv2$diffexpressed[res_nocnv2$B1_1 <= -0.6 & res_nocnv2$padj < 0.05] <- "DOWN"
+colnames(res_nocnv)[3] <- "B1_1"
+colnames(res_cnv)[3] <- "B1_2"
+res_cnv$diffexpressed <- "NO"
+res_cnv$diffexpressed[res_cnv$B1_2 >= 0.6 & res_cnv$padj < 0.05] <- "UP"
+res_cnv$diffexpressed[res_cnv$B1_2 <= -0.6 & res_cnv$padj < 0.05] <- "DOWN"
 
 #Make simple graphics
-p1 <- ggplot(data = res_nocnv1, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+p1 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_color_manual(values = c("blue", "black", "red"))+
   scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  labs(title="DE Tum vs Norm (M1)",x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p1
 
-p2 <- ggplot(data = res_cnv1, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+p2 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_color_manual(values = c("blue", "black", "red"))+
   scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  labs(title="DE Tum vs Norm (M2)",x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p2
 
-p3 <- ggplot(data = res_nocnv2, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+p3 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
+  scale_color_manual(values = c("blue", "black", "red"))+
   scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  labs(x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p3
 
-p4 <- ggplot(data = res_cnv2, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+p4 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("black", "#00AFBB", "#bb0c00"))+
-  scale_x_continuous(breaks = seq(-10, 10, 4))+
-  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  scale_color_manual(values = c("black", "blue", "red"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p4
 
-p5 <- ggplot(data = stat_res_luad, aes(x = B1_1, y = -log10(padj_1), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
+res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
+  
+p5 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
-  scale_x_continuous(breaks = seq(-10, 10, 4))+
-  labs(title="DGE Tum vs Norm (M1)",x="Effect size (B1_1)")+
+  scale_color_manual(values = c("blue", "black", "red"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p5
 
 #delete rows by name
-stat_res_luad <- stat_res_luad[!(row.names(stat_res_luad) %in% c("NXPH3")),]
+res_nocnv <- res_nocnv[!(row.names(res_nocnv) %in% c("PYCR1")),]
 
-p6 <- ggplot(data = stat_res_luad, aes(x = B1_2, y = -log10(padj_2), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "blue", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "blue", linetype = 'dashed') +
+p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 2) +
-  scale_color_manual(values = c("#00AFBB", "black", "#bb0c00"))+
-  scale_x_continuous(breaks = seq(-10, 10, 4))+
-  labs(title="DGE Tum vs Norm (M2)",x="Effect size (B1_2)")+
+  scale_color_manual(values = c("blue", "black", "red"))+
+  scale_x_continuous(breaks = seq(-14, 10, 4))+
+  labs(x="effect size (log2)")+
+  theme_bw()+
   theme(legend.position="none")+
-  #theme_minimal()+
-  font("xy.text", size = 14, color = "black", face = "bold")+
-  font("xlab", size = 14)+
-  font("ylab", size = 14)
+  font("xy.text", size = 12, color = "black")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 p6
 
 #Plots

@@ -13,7 +13,8 @@ library(DESeq2)
 #source("../code/utils.R")
 statRes_map_CNV = read.csv('~/model_fit_Python/model_results/results_luad/results_3/statRes_map_CNV.csv',header=TRUE)
 statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
-res_nocnv2 = read.csv('~/model_fit_Python/model_results/results_sinthetic_brca/heterog_cnv/res_sint_nocnv.csv',header=TRUE)
+res_cnv = read.csv('~/model_fit_Python/model_results/results_real_brca/res_cnv.csv',header=TRUE)
+res_luad_cnv = read.csv('~/model_fit_Python/model_results/results_luad/test_tum_vs_norm_46/res_cnv.csv',header=TRUE)
 rna_normal = read.csv('~/model_data/TCGA/breast_cancer/sinthetic_data/rna_normal.csv',header=TRUE)
 
 #Data preprocessing
@@ -25,6 +26,7 @@ cnv_tumor <- replace(cnv, cnv>5, 5)
 
 #Data save
 save(p6, file = "~/model_fit_Python/model_results/results_sinthetic_brca/p6.Rdata")
+
 write.csv(rna_cnv, file = "~/model_fit_Python/model_data/test_tum_vs_norm_46/rna_cnv.csv")
 
 #Data manipulation and cleaning
@@ -64,22 +66,24 @@ all.equal(colnames(),rownames())
 #starting from normal mRNA counts
 rna_norm_tum <- cbind(brca_rna_norm, brca_cnv_tumor)
 # remove genes with low counts
-rna_norm_tum <- rna_norm_tum[rowSums(rna_norm_tum) > 500,] 
+luad_rna_norm <- luad_rna_norm[rowSums(luad_rna_norm) > 200,] 
 
-rna_norm <- rna %>% select(1:50)
-rna_tum <- rna %>%  select(51:100)
+rna_norm <- luad_rna_norm %>% select(1:23)
+rna_tum <- luad_rna_norm %>%  select(24:46)
 
+rna_normal <- luad_rna_norm
+ 
 group1 <- rna_normal[1:2000,]
 group2 <- rna_normal[2001:4000,]
 group3 <- rna_normal[4001:6000,]
 group4 <- rna_normal[6001:8000,]
 group5 <- rna_normal[8001:10000,]
 
-cnv1 <- matrix(1, nrow(group1), 50)
-cnv2 <- matrix(2, nrow(group1), 50)
-cnv3 <- matrix(3, nrow(group1), 50)
-cnv4 <- matrix(4, nrow(group1), 50)
-cnv5 <- matrix(5, nrow(group1), 50)
+cnv1 <- matrix(1, nrow(group1), 23)
+cnv2 <- matrix(2, nrow(group1), 23)
+cnv3 <- matrix(3, nrow(group1), 23)
+cnv4 <- matrix(4, nrow(group1), 23)
+cnv5 <- matrix(5, nrow(group1), 23)
 
 cnv <- rbind(cnv1, cnv2, cnv3, cnv4, cnv5)
 rna_normal <- rbind(group1, group2, group3, group4, group5)
@@ -167,6 +171,12 @@ sum(deg$gene_group == "dosage-insensitive" & deg$cnv == "5", na.rm=TRUE)
 deg_up <- subset(stat_res_luad, stat_res_luad$padj_1 < 0.05 & stat_res_luad$B1_1 > 0.6)
 deg_down <- subset(stat_res_luad, stat_res_luad$padj_1 < 0.05 & stat_res_luad$B1_1 < -0.6)
 deg <- rbind(deg_up, deg_down)
+
+#Separate CNV regulated genes
+genes_cnvReg_1 <- subset(deg, deg$padj_2 > 0.05 & deg$difference > 0.2)
+genes_cnvReg_2 <- subset(deg, deg$padj_2 > 0.05 & deg$difference < -0.2)
+genes_cnvReg <- rbind(genes_cnvReg_1, genes_cnvReg_2)
+
 
 #Calculate SD across rows
 cnv_sd <- transform(cnv_filtered, sd=apply(cnv_filtered, 1, sd, na.rm=TRUE)) %>% 
