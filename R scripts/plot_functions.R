@@ -1,8 +1,10 @@
-#Plots
+### Plots ###
+
 library(ggplot2)
 library(ggpubr)
+library(tidyverse)
 
-#Making barplot
+### Making barplot ###
 #row.names(cnv) <- 1:nrow(cnv) cnv[1:3]
 #cvn$GeneID <- rownames(cvn)
 df <- data.frame(dge_groups=rep(c("DEG", "DEG_CNV"), each=3),
@@ -30,7 +32,7 @@ plot_data_2$cnv <- as.factor(plot_data_2$cnv)
 plot_data <- rbind(plot_data_1, plot_data_2)
 
 
-#Boxplot
+### Boxplot ###
 
 # Compute summary statistics
 summary.stats <- plot_data_2 %>%
@@ -74,7 +76,10 @@ ggarrange(
   heights = c(0.80, 0.20)
 )
 
-#Violin plot
+---------------------------------------------------------------------------------
+### Violin plot ###
+---------------------------------------------------------------------------------
+  
 plot_1 <- ggplot(deg, aes(x = cnv, y = difference, fill = cnv))+
   geom_violin(trim=FALSE)+
   #geom_jitter(shape=10, position=position_jitter(0.1))+
@@ -101,7 +106,9 @@ plot_2 <- ggplot(genes_cnvReg, aes(x = cnv, y = difference, fill = cnv))+
 
 grid.arrange(barplot, plot_1, plot_2, nrow = 1)
 
-#Scatter plot
+-----------------------------------------------------------------------
+### Scatter plot ###
+-----------------------------------------------------------------------  
 scatterplot <- ggplot(res_allGenes, aes(x=cnv_mean, y=difference)) + 
   geom_point()+
   geom_smooth()+
@@ -138,87 +145,95 @@ barplot <- ggplot(data_barplot, aes(y = number_of_genes, x = gene_group, fill = 
   font("ylab", size = 12)
 barplot
 
-# Volcano Plot
+-------------------------------------------------------------------------
+### Volcano Plot ###
+-------------------------------------------------------------------------  
 library(gridExtra)
+library(tidyverse)
+
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
-colnames(res_nocnv)[3] <- "B1_1"
-colnames(res_cnv)[3] <- "B1_2"
-res_cnv$diffexpressed <- "NO"
-res_cnv$diffexpressed[res_cnv$B1_2 >= 0.6 & res_cnv$padj < 0.05] <- "UP"
-res_cnv$diffexpressed[res_cnv$B1_2 <= -0.6 & res_cnv$padj < 0.05] <- "DOWN"
+colnames(res3_nocnv)[3] <- "B1_1"
+colnames(res4_cnv)[3] <- "B1_2"
+res4$diffexpressed <- "NO"
+res4$diffexpressed[res4$log2FoldChange >= 1.0 & res4$padj < 0.05] <- "UP"
+res4$diffexpressed[res4$log2FoldChange < -1.0 & res4$padj < 0.05] <- "DOWN"
 
 #Make simple graphics
-p1 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
+  geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(title="DE Tum vs Norm (M1)",x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="DESeq2: CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 10, color = "black")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)+
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p1
 
-p2 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(title="DE Tum vs Norm (M2)",x="effect size (log2)")+
+  geom_point(size = 1) +
+  scale_color_manual(values = c("black", "blue", "red"))+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="DESeqCN: CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 10, color = "black")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)+
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p2
 
-p3 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
+  geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-10, 10, 2))+
+  labs(title="DESeq2: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 10, color = "black")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)+
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p3
 
-p4 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
-  scale_color_manual(values = c("black", "blue", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(x="effect size (log2)")+
+  geom_point(size = 1) +
+  scale_color_manual(values = c("blue", "black", "red"))+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="DESeqCN: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 10, color = "black")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)+
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p4
 
 res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
 res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
   
-p5 <- ggplot(data = res_nocnv, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
+p5 <- ggplot(data = res_map_tum_norm, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
+  geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
   scale_x_continuous(breaks = seq(-14, 10, 4))+
   labs(x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 8, color = "black")+
+  font("xlab", size = 8)+
+  font("ylab", size = 8)
 p5
 
 #delete rows by name
@@ -227,22 +242,37 @@ res_nocnv <- res_nocnv[!(row.names(res_nocnv) %in% c("PYCR1")),]
 p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 2) +
+  geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
   scale_x_continuous(breaks = seq(-14, 10, 4))+
   labs(x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 12, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)
+  font("xy.text", size = 8, color = "black")+
+  font("xlab", size = 8)+
+  font("ylab", size = 8)
 p6
 
 #Plots
-grid.arrange(p1, p2, p3, p4, p5, p6, nrow = 3)
+gridExtra::grid.arrange(plot1, plot2, plot3, plot4, nrow = 2)
 #grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
-#Density plot
+
+-------------------------------------------------------------
+### Histogram ###
+-------------------------------------------------------------
+
+plot2 <- ggplot(res2, aes(x=padj))+
+  geom_histogram(color="darkblue", fill="lightblue", bins = 100)+
+  geom_vline(xintercept = c(0.05), col = "red", linetype = 'dashed')+
+  labs(title="DESeqCN : CN signal", x="FDR")+
+  theme_bw()+
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+plot1
+    
+--------------------------------------------------------------
+### Density plot ###
+--------------------------------------------------------------  
 
 ggplot(resFit_merged, aes(Difference)) +
   geom_histogram(bins = 1000) +

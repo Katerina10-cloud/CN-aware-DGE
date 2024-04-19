@@ -1,4 +1,4 @@
-# RNA vs CNV analysis
+### RNA vs CNV analysis ###
 
 library(ggplot2)
 library(cowplot)
@@ -11,11 +11,8 @@ library(DESeq2)
 #Load datasets
 #load("../data/patMeta_enc.RData")
 #source("../code/utils.R")
-statRes_map_CNV = read.csv('~/model_fit_Python/model_results/results_luad/results_3/statRes_map_CNV.csv',header=TRUE)
-statRes_map_noCNV = read.csv('~/model_fit_Python/model_results/results_brca/statRes_map_noCNV.csv',header=TRUE)
-res_cnv = read.csv('~/model_fit_Python/model_results/results_real_brca/res_cnv.csv',header=TRUE)
-res_luad_cnv = read.csv('~/model_fit_Python/model_results/results_luad/test_tum_vs_norm_46/res_cnv.csv',header=TRUE)
-rna_normal = read.csv('~/model_data/TCGA/breast_cancer/sinthetic_data/rna_normal.csv',header=TRUE)
+res4 = read.csv('model_fit_Python/data_simulation/results/res4_csv.csv',header=TRUE)
+
 
 #Data preprocessing
 cnv_tumor <- cnv_tumor %>% remove_rownames %>% column_to_rownames(var="Row.names")
@@ -65,6 +62,7 @@ all.equal(colnames(),rownames())
 #Generating simulated data
 #starting from normal mRNA counts
 rna_norm_tum <- cbind(brca_rna_norm, brca_cnv_tumor)
+
 # remove genes with low counts
 luad_rna_norm <- luad_rna_norm[rowSums(luad_rna_norm) > 200,] 
 
@@ -90,7 +88,6 @@ rna_normal <- rbind(group1, group2, group3, group4, group5)
 rna_tumor <- rna_tumor[(rownames(rna_tumor) %in% rownames(rna_normal)),]
 rna_norm_tum <- cbind(rna_norm, rna_tum)
 
-rna_norm <- rna_norm_tum %>% select(1:110)
 colnames(cnv_norm) <- colnames(rna_norm)
 rownames(cnv_norm) <- rownames(rna_norm)
 
@@ -102,8 +99,7 @@ cnv <- cbind(cnv_tumor, cnv_norm)
 cnv_tumor <- cnv_tumor/2   
 cnv <- cnv + 10e-9
 rna_tumor <- rna_tumor * cnv_tum
-rna_cnv <- rna_norm_tum * cnv
-
+rna_cnv <- rna_counts * cnv
 
 #Counts normalization
 rna_normalized <- luad_rna %>%  as.matrix()
@@ -161,16 +157,17 @@ deg <- deg %>%
   ))
 
 #getting DE genes
-sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$B1_1 >= 0.6, na.rm=TRUE) #up_regulated
-sum(statRes_map_noCNV$padj < 0.05 & statRes_map_noCNV$B1_1 <= -0.6, na.rm=TRUE) #down-reg
+sum(res1_nocnv$padj < 0.05 & res1_nocnv$log2FoldChange >= 0.5, na.rm=TRUE) #up_regulated
+sum(res1_nocnv$padj < 0.05 & res1_nocnv$log2FoldChange <= -0.5, na.rm=TRUE) #down-reg
 
 sum(res_allG$B1_1 < 1.0 & res_allG$B1_1 > -1 & res_allG$padj > 0.05, na.rm=TRUE)
 sum(res_noCNV$gene_group == "not significant" & res_noCNV$cn_group == "cn_amplification", na.rm=TRUE)
 sum(deg$gene_group == "dosage-insensitive" & deg$cnv == "5", na.rm=TRUE)
 
-deg_up <- subset(stat_res_luad, stat_res_luad$padj_1 < 0.05 & stat_res_luad$B1_1 > 0.6)
-deg_down <- subset(stat_res_luad, stat_res_luad$padj_1 < 0.05 & stat_res_luad$B1_1 < -0.6)
+deg_up <- subset(res1_nocnv, res1_nocnv$padj < 0.05 & res1_nocnv$log2FoldChange > 0.5)
+deg_down <- subset(res1_nocnv, res1_nocnv$padj < 0.05 & res1_nocnv$log2FoldChange < -0.5)
 deg <- rbind(deg_up, deg_down)
+deg_cnv <- rownames(deg)
 
 #Separate CNV regulated genes
 genes_cnvReg_1 <- subset(deg, deg$padj_2 > 0.05 & deg$difference > 0.2)
@@ -186,4 +183,4 @@ cnv_sd <- transform(cnv_filtered, sd=apply(cnv_filtered, 1, sd, na.rm=TRUE)) %>%
 
 
 
-
+                       
