@@ -6,7 +6,7 @@ setwd("C:/Users/rifug/Documents/CNV-informed-DGE-modelling")
 library(DESeq2)
 library(tidyverse)
 
-### Generate RNA counts data ###
+### Generate RNA counts data using DESeq2 ###
 dds <- DESeq2::makeExampleDESeqDataSet(
   n = 20000,
   m = 100,
@@ -116,19 +116,20 @@ rna_mixed <- cbind(rna_normal, rna_mixed)
 
 ## Simulated data preprocessing OMICSSimLA ##
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CNV-informed-DGE-modelling")
 
-cnv_sim_lusc <- read.table(file = "LuscSim_cnv.txt", header = FALSE, sep = "")
-cnv_sim_lusc <- cnv_sim_lusc[-c(2:3)]
-cnv_sim_lusc <- cnv_sim_lusc %>% remove_rownames %>% column_to_rownames(var="V1")
-colnames(cnv_sim_lusc) <- paste0("G", 1:(ncol(cnv_sim_lusc)-1))
-cnv_sim_lusc <- t(cnv_sim_lusc)
+cnv_sim_luad <- read.table(file = "data/GbmSim1.tsv", header = FALSE, sep = "")
+cnv_sim_luad <- cnv_sim_luad[-c(2:3)]
+cnv_sim_luad <- cnv_sim_luad[-which(duplicated(cnv_sim_luad$V1)), ]
+cnv_sim_luad <- cnv_sim_luad %>% remove_rownames %>% column_to_rownames(var="V1")
+colnames(cnv_sim_luad) <- paste0("G", 1:(ncol(cnv_sim_luad)-1))
+cnv_sim_luad <- t(cnv_sim_luad)
 
 # Assigning CN states #
-cnv_sim_lusc <- apply(cnv_sim_lusc, 2, function(x) ifelse(x == "2,2", "6", x)) 
+cnv_sim_luad <- apply(cnv_sim_luad, 2, function(x) ifelse(x == "2,2", "6", x)) 
 
-cnv_sim_lusc <- cnv_sim_lusc %>% as.tibble() %>% mutate_if(is.character, as.numeric)
-hist(rowMeans(cnv_sim_lusc))
+cnv_sim_luad <- cnv_sim_luad %>% as.tibble() %>% mutate_if(is.character, as.numeric)
+hist(rowMeans(cnv_sim_luad))
 
 # Sampling data generation #
 
@@ -142,10 +143,10 @@ cnv_2 <- sapply(1:50, function(x) sample(x=c(1,2,3,4,5), size = 12000, replace=T
 cnv_tumor <- rbind(cnv_0, cnv_1, cnv_3, cnv_4, cnv_5, cnv_2)
 
 
-hist(rowMeans(cnv_2),
-     main = "CNV simulation frequency (2884 genes)", 
+hist(rowMeans(laml_cnv_tumor),
+     main = "AML CNV", 
      xlab = "CN state",
-     breaks = 6)
+     breaks = 15)
 
 # Generate RNAseq counts data #
 library(compcodeR)
