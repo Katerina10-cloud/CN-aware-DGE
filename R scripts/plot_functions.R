@@ -1,4 +1,6 @@
+###--------------------------------------------------------###
 ### Plots ###
+###--------------------------------------------------------###
 
 library(ggplot2)
 library(ggpubr)
@@ -76,9 +78,9 @@ ggarrange(
   heights = c(0.80, 0.20)
 )
 
----------------------------------------------------------------------------------
+###-------------------------------------------------------------------###
 ### Violin plot ###
----------------------------------------------------------------------------------
+###-------------------------------------------------------------------###
   
 plot_1 <- ggplot(deg, aes(x = cnv, y = difference, fill = cnv))+
   geom_violin(trim=FALSE)+
@@ -106,9 +108,11 @@ plot_2 <- ggplot(genes_cnvReg, aes(x = cnv, y = difference, fill = cnv))+
 
 grid.arrange(barplot, plot_1, plot_2, nrow = 1)
 
------------------------------------------------------------------------
+
+###-------------------------------------------------------------------###
 ### Scatter plot ###
------------------------------------------------------------------------  
+###-------------------------------------------------------------------###
+
 scatterplot <- ggplot(res_allGenes, aes(x=cnv_mean, y=difference)) + 
   geom_point()+
   geom_smooth()+
@@ -145,22 +149,24 @@ barplot <- ggplot(data_barplot, aes(y = number_of_genes, x = gene_group, fill = 
   font("ylab", size = 12)
 barplot
 
--------------------------------------------------------------------------
+
+###-------------------------------------------------------------------###
 ### Volcano Plot ###
--------------------------------------------------------------------------  
+###-------------------------------------------------------------------###
+
 library(gridExtra)
 library(tidyverse)
 
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
-colnames(res3_nocnv)[3] <- "B1_1"
-colnames(res4_cnv)[3] <- "B1_2"
-res4$diffexpressed <- "NO"
-res4$diffexpressed[res4$log2FoldChange >= 1.0 & res4$padj < 0.05] <- "UP"
-res4$diffexpressed[res4$log2FoldChange < -1.0 & res4$padj < 0.05] <- "DOWN"
+#colnames(res3_nocnv)[3] <- "B1_1"
+#colnames(res4_cnv)[3] <- "B1_2"
+res1$diffexpressed <- "NO"
+res1$diffexpressed[res1$log2FoldChange > 0.5 & res1$padj < 0.05] <- "UP"
+res1$diffexpressed[res4$log2FoldChange < -0.5 & res1$padj < 0.05] <- "DOWN"
 
 #Make simple graphics
 p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
@@ -254,13 +260,13 @@ p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed
 p6
 
 #Plots
-gridExtra::grid.arrange(plot1, plot2, plot3, plot4, nrow = 2)
+gridExtra::grid.arrange(p1, p2, p3,p4, nrow = 2)
 #grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
 
--------------------------------------------------------------
+###------------------------------------------------------------###
 ### Histogram ###
--------------------------------------------------------------
+###------------------------------------------------------------###
 
 plot2 <- ggplot(res2, aes(x=padj))+
   geom_histogram(color="darkblue", fill="lightblue", bins = 100)+
@@ -269,10 +275,11 @@ plot2 <- ggplot(res2, aes(x=padj))+
   theme_bw()+
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot1
+
     
---------------------------------------------------------------
+###----------------------------------------------------------------###
 ### Density plot ###
---------------------------------------------------------------  
+###----------------------------------------------------------------###  
 
 ggplot(resFit_merged, aes(Difference)) +
   geom_histogram(bins = 1000) +
@@ -303,6 +310,32 @@ scatter_plot = ggplot(statRes_map_CNV, aes(x = cnv_mean, y = Log2FC)) +
   theme_classic()
 #facet_wrap(~FILTER) +
 scatter_plot
+
+
+###-------------------------------------------------------------###
+### ROC curve ###
+###-------------------------------------------------------------###
+
+#BiocManager::install("metaseqR2")
+library(metaseqR2)
+
+p1 <- matrix(res3$padj)
+colnames(p1) <- "DESeq2"
+p2 <- matrix(res4$padj)
+colnames(p2) <- "DESeqCN"
+p <- cbind(p1,p2)
+
+res3 <- res3 %>% 
+  mutate(truth = case_when(
+    log2FoldChange >= 1.0 & padj < 0.05 ~ "1",
+    log2FoldChange <= -1.0 & padj < 0.05 ~ "1",
+    log2FoldChange < 1 | log2FoldChange > -1 & padj >= 0.05 ~ "0")) 
+
+truth <- as.vector(as.numeric(res4$truth))
+names(truth) <- res4$X
+
+metaseqR2::diagplotRoc(truth = truth, p = p2, sig = 0.05, x = "fpr",
+                       y = "tpr", path = NULL, draw = TRUE)
 
 
 
