@@ -1,4 +1,6 @@
+###----------------------------------------------------------###
 ### RNA vs CNV analysis ###
+###----------------------------------------------------------###
 
 library(ggplot2)
 library(cowplot)
@@ -8,10 +10,9 @@ library(ggpubr)
 library(DESeq2)
 
 #Exploration of CNV and RNAseq data 
-#Load datasets
-#load("../data/patMeta_enc.RData")
 #source("../code/utils.R")
-res4 = read.csv('model_fit_Python/data_simulation/results/res4_csv.csv',header=TRUE)
+
+res4 = read.csv('data_simulation/results/sim_1/res4_csv.csv',header=TRUE)
 
 
 #Data preprocessing
@@ -23,7 +24,6 @@ cnv_tumor <- replace(cnv, cnv>5, 5)
 
 #Data save
 save(p6, file = "~/model_fit_Python/model_results/results_sinthetic_brca/p6.Rdata")
-
 write.csv(rna_cnv, file = "~/model_fit_Python/model_data/test_tum_vs_norm_46/rna_cnv.csv")
 
 #Data manipulation and cleaning
@@ -66,34 +66,6 @@ rna_norm_tum <- cbind(brca_rna_norm, brca_cnv_tumor)
 # remove genes with low counts
 luad_rna_norm <- luad_rna_norm[rowSums(luad_rna_norm) > 200,] 
 
-rna_norm <- luad_rna_norm %>% select(1:23)
-rna_tum <- luad_rna_norm %>%  select(24:46)
-
-rna_normal <- luad_rna_norm
- 
-group1 <- rna_normal[1:2000,]
-group2 <- rna_normal[2001:4000,]
-group3 <- rna_normal[4001:6000,]
-group4 <- rna_normal[6001:8000,]
-group5 <- rna_normal[8001:10000,]
-
-cnv1 <- matrix(1, nrow(group1), 23)
-cnv2 <- matrix(2, nrow(group1), 23)
-cnv3 <- matrix(3, nrow(group1), 23)
-cnv4 <- matrix(4, nrow(group1), 23)
-cnv5 <- matrix(5, nrow(group1), 23)
-
-cnv <- rbind(cnv1, cnv2, cnv3, cnv4, cnv5)
-rna_normal <- rbind(group1, group2, group3, group4, group5)
-rna_tumor <- rna_tumor[(rownames(rna_tumor) %in% rownames(rna_normal)),]
-rna_norm_tum <- cbind(rna_norm, rna_tum)
-
-colnames(cnv_norm) <- colnames(rna_norm)
-rownames(cnv_norm) <- rownames(rna_norm)
-
-cnv_norm <- matrix(1, nrow(rna_norm), 45)
-cnv <- cbind(cnv_tumor, cnv_norm)
-
 
 #Correction of normal RNAseq counts for CNV
 cnv_tumor <- cnv_tumor/2   
@@ -103,9 +75,9 @@ rna_cnv <- rna_counts * cnv
 
 #Counts normalization
 rna_normalized <- luad_rna %>%  as.matrix()
-#rna_normalized <- DESeq2::varianceStabilizingTransformation(rna_normalized)
 rna_log_normalized <- DESeq2::rlog(rna_normalized)
 
+# Z-score trasformation
 rna_zscore <- t(scale(t(rna_log_normalized)))
 rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:10)
 rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% select(11:20) 
@@ -175,10 +147,25 @@ genes_cnvReg_2 <- subset(deg, deg$padj_2 > 0.05 & deg$difference < -0.2)
 genes_cnvReg <- rbind(genes_cnvReg_1, genes_cnvReg_2)
 
 
-#Calculate SD across rows
-cnv_sd <- transform(cnv_filtered, sd=apply(cnv_filtered, 1, sd, na.rm=TRUE)) %>% 
-  subset(cnv_sd, sd < 0.8) %>% 
-  select(1,3,5:10)
+#Calculate SD across rows and columns 
+library(matrixStats)
+
+laml_cnv_sd1 <- transform(laml_cnv_sd, sd=apply(laml_cnv_sd, 1, sd, na.rm=TRUE)) %>% 
+  subset(sd > 0.78) %>% 
+  select(1:90) %>% 
+  as.matrix()
+  
+cols_sd_gbm <- matrixStats::colSds(laml_cnv_sd) %>% 
+  as.data.frame() %>% 
+  setNames("sd") %>% 
+  subset(sd > 0.1)
+
+laml_cnv_sd <- laml_cnv_sd[,colnames(laml_cnv_sd) %in% rownames(cols_sd_gbm)]
+
+save(laml_cnv_sd1, file = "laml_cnv_sd.Rdata")
+
+
+
 
 
 
