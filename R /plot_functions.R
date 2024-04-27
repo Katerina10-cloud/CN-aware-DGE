@@ -160,9 +160,11 @@ library(tidyverse)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
-res1$diffexpressed <- "NO"
-res1$diffexpressed[res1$log2FoldChange > 0.5 & res1$padj < 0.05] <- "UP"
-res1$diffexpressed[res4$log2FoldChange < -0.5 & res1$padj < 0.05] <- "DOWN"
+res4$diffexpressed <- "NO"
+res4$diffexpressed[res4$log2FoldChange > 0.5 & res4$padj < 0.05] <- "UP"
+res4$diffexpressed[res4$log2FoldChange < -0.5 & res4$padj < 0.05] <- "DOWN"
+
+res3 <- res3[-c(3573, 356), ]
 
 #Make simple graphics
 p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
@@ -170,7 +172,7 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  scale_x_continuous(breaks = seq(-2, 2, 0.5))+
   labs(title="DESeq2: CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
@@ -181,11 +183,11 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
 p1
 
 p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("black", "blue", "red"))+
-  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  scale_x_continuous(breaks = seq(-2, 2, 0.5))+
   labs(title="DESeqCN: CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
@@ -196,11 +198,11 @@ p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(padj), col = diffex
 p2
 
 p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-10, 10, 2))+
+  scale_x_continuous(breaks = seq(-3, 3, 0.5))+
   labs(title="DESeq2: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
@@ -211,11 +213,11 @@ p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffex
 p3
 
 p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1, 1), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  scale_x_continuous(breaks = seq(-3, 3, 0.5))+
   labs(title="DESeqCN: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
@@ -225,8 +227,8 @@ p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p4
 
-res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
-res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
+#res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
+#res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
   
 p5 <- ggplot(data = res_map_tum_norm, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
@@ -243,7 +245,7 @@ p5 <- ggplot(data = res_map_tum_norm, aes(x = B1_1, y = -log10(padj), col = diff
 p5
 
 #delete rows by name
-res_nocnv <- res_nocnv[!(row.names(res_nocnv) %in% c("PYCR1")),]
+#res_nocnv <- res_nocnv[!(row.names(res_nocnv) %in% c("PYCR1")),]
 
 p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
@@ -319,22 +321,22 @@ scatter_plot
 #BiocManager::install("metaseqR2")
 library(metaseqR2)
 
-p1 <- matrix(res3$padj)
+p1 <- matrix(res1$padj)
 colnames(p1) <- "DESeq2"
 p2 <- matrix(res4$padj)
 colnames(p2) <- "DESeqCN"
 p <- cbind(p1,p2)
 
-res3 <- res3 %>% 
+res1 <- res1 %>% 
   mutate(truth = case_when(
-    log2FoldChange >= 1.0 & padj < 0.05 ~ "1",
-    log2FoldChange <= -1.0 & padj < 0.05 ~ "1",
-    log2FoldChange < 1 | log2FoldChange > -1 & padj >= 0.05 ~ "0")) 
+    log2FoldChange > 0.5 & padj < 0.05 ~ "1",
+    log2FoldChange < -0.5 & padj < 0.05 ~ "1",
+    log2FoldChange <= 0.5 | log2FoldChange >= -0.5 & padj >= 0.05 ~ "0")) 
 
-truth <- as.vector(as.numeric(res4$truth))
-names(truth) <- res4$X
+truth <- as.vector(as.numeric(res1$truth))
+names(truth) <- res1$X
 
-metaseqR2::diagplotRoc(truth = truth, p = p2, sig = 0.05, x = "fpr",
+metaseqR2::diagplotRoc(truth = truth, p = p1, sig = 0.05, x = "fpr",
                        y = "tpr", path = NULL, draw = TRUE)
 
 
