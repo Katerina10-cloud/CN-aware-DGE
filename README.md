@@ -20,7 +20,7 @@ $`K_{ij} =`$ mRNA counts
 
 $`CN_{ij} =`$ copy number integers (0,1,2,...,5)
 
-$`X_j = [1, X_{j1}] = `$ covariate vector (design matrix including intercept)
+$`X_j = [1, X_{j1}] = `$ covariate vector (design matrix, including intercept)
 
 $`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector (base level, effect size)
 
