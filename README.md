@@ -14,7 +14,7 @@ $`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$
 
 $`\mu_{ij} = s_j q_{ij}`$  
 
-$`\log(q_{ij}) = \beta_{i0} X_{j0} \displaystyle \frac{CN_{ij}}{2} + \beta_{i1} X_{j1}`$ 
+$`\log(q_{ij}) = \beta_{i0} X_{j0} \displaystyle \frac({CN_{ij}}{2}) + \beta_{i1} X_{j1}`$ 
 
 $`K_{ij} =`$ mRNA counts
 
@@ -22,7 +22,7 @@ $`CN_{ij} =`$ copy number
 
 $`X_j = [1, X_{j1}] = `$ covariate vector (design matrix)
 
-$`\beta_i = [\beta_{j0}, \beta_{i1}] = `$ regression coefficient vector
+$`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector
 
 $`s_j =`$ library size factor
 
