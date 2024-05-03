@@ -2,28 +2,31 @@
 ### Simulate RNAseq counts ###
 ###------------------------------------------------------------###
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation")
 
 library(tidyverse)
 library(compcodeR)
 
 rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 15000, 
-                                                   samples.per.cond = 180, n.diffexp = 0, 
+                                                   samples.per.cond = 36, n.diffexp = 0, 
                                                    repl.id = 1, seqdepth = 1e7, 
                                                    fraction.upregulated = 0.0, 
-                                                   between.group.diffdisp = FALSE, 
+                                                   between.group.diffdisp = TRUE, 
                                                    filter.threshold.total = 1, 
                                                    filter.threshold.mediancpm = 0, 
                                                    fraction.non.overdispersed = 0, 
                                                    relmeans = "auto",
                                                    dispersions = "auto",
+                                                   random.outlier.high.prob = 20,
+                                                   random.outlier.low.prob = 20,
                                                    output.file = "rna_counts_sim.rds")
 
 rna_counts_sim <- rna_counts_sim@count.matrix
-rna_normal <- rna_counts_sim %>% as.data.frame() %>% select(1:90)
-rna_tumor <- rna_counts_sim %>% as.data.frame() %>% select(91:180)
-metadata <- data.frame(patID = colnames(rna_nocnv),
-                       condition = rep(c("A", "B"), each = 90))
+rna_normal <- luad_rna_sd %>% as.data.frame() %>% select(1:45)
+rna_tumor <- luad_rna_sd %>% as.data.frame() %>% select(46:90)
+rna_counts <- cbind(brca_rna_normal, brca_rna_tum)
+metadata <- data.frame(patID = colnames(rna_counts),
+                       condition = rep(c("A", "B"), each = 96))
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
 
 
@@ -58,16 +61,20 @@ cnv_4 <- sapply(1:50, function(x) sample(x=c(0.5,1,2,3,4,5), size = 700, replace
 cnv_5 <- sapply(1:50, function(x) sample(x=c(1,2,3,4,5), size = 400, replace=TRUE, prob = c(.05, .05, 0.10, .10, .70)))
 cnv_2 <- sapply(1:36, function(x) sample(x=c(1,2,3,4,5), size = 11000, replace=TRUE, prob = c(.05, .80, .05, .05, .05)))
 
-cnv_tumor <- rbind(laml_cnv_sd1, cnv_heterog_2)
-cnv_norm <- matrix(1, nrow(rna_normal), 90)
+#cnv_tumor <- rbind(laml_cnv_sd1, cnv_heterog_2)
 
-colnames(cnv_heterog_2) <- colnames(rna_tumor)
-rownames(cnv_heterog_2) <- rownames(rna_tumor)
- 
+rna_normal <- luad_rna_sd[1:45]
+rna_tumor <- luad_rna_sd[46:90]
+cnv_norm <- matrix(2, nrow(rna_normal), 45)
+
+colnames(cnv_norm) <- colnames(rna_normal)
+rownames(cnv_norm) <- rownames(rna_normal)
+
+cnv_tumor <- as.matrix(cnv_tumor) 
 cnv_tumor <- cnv_tumor/2   
-cnv <- cbind(cnv_norm, cnv_tumor)
+cnv <- cbind(cnv_tumor, cnv_norm)
 cnv <- cnv + 10e-9
-rna_nocnv <- rna_counts_sim * cnv
+rna_cnv <- rna_counts * cnv
 
 
 ## Reverse dosage simulation ##
@@ -123,13 +130,15 @@ hist(rowMeans(cnv_sim_luad))
 
 ### Frequency histogram ###
 hist(rowMeans(cnv_tumor),
-     main = "CNV frequency TCGA-LAML (3500 genes)", 
+     main = "CNV frequency TCGA-BRCA (20 000 genes)", 
      xlab = "CN state",
      breaks = 20)
 
 
-write.csv(metadata, file = "de_fit_Python/data_simulation/sim2_real_cnv/aml/metadata.csv")
-write.csv(rna_nocnv, file = "de_fit_Python/data_simulation/sim2_real_cnv/aml/rna_nocnv.csv")
+write.csv(metadata, file = "sim3_real_data/brca/metadata.csv")
+write.csv(luad_rna_sd, file = "rna_luad.csv")
+
+save(brca_rna_tum, file = "brca_rna_tumor.Rdata")
 
 #laml_cnv_sd1 <- laml_cnv_sd1[1:3000,]
 #colnames(cnv_heterog_2) <- colnames(rna_tumor)

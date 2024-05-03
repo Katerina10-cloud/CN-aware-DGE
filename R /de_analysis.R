@@ -12,7 +12,7 @@ library(DESeq2)
 #Exploration of CNV and RNAseq data 
 #source("../code/utils.R")
 
-res4 = read.csv('data_simulation/results/sim_1/res4_csv.csv',header=TRUE)
+res1 = read.csv('results/sim_3/brca/res1_nocnv.csv',header=TRUE)
 
 
 #Data preprocessing
@@ -53,8 +53,9 @@ cnv_tumor <- luad_cnv_tumor %>% replace(cnv_tumor, cnv_tumor>5, 6) %>%
 
 #Metadata generation
 rna_nor <- rna_normal %>% gsub("-", ".", rna_normal)
-metadata <- data.frame(patID = colnames(rna_norm_tum), 
-                       condition = rep(c("A", "B"), each = 45)) 
+rna_counts <- cbind(brca_rna_normal, brca_rna_tum)
+metadata <- data.frame(patID = colnames(rna_nocnv), 
+                       condition = rep(c("A", "B"), each = 96)) 
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var="patID")  
 metadata$condition <- as.factor(metadata$condition)
 all.equal(colnames(),rownames())
@@ -150,24 +151,61 @@ genes_cnvReg <- rbind(genes_cnvReg_1, genes_cnvReg_2)
 #Calculate SD across rows and columns 
 library(matrixStats)
 
-laml_cnv_sd1 <- transform(laml_cnv_sd, sd=apply(laml_cnv_sd, 1, sd, na.rm=TRUE)) %>% 
-  subset(sd > 0.78) %>% 
-  select(1:90) %>% 
+rna_counts <- transform(rna_counts, sd=apply(rna_counts, 1, sd, na.rm=TRUE)) %>% 
+  subset(sd > 25.0) %>% 
+  select(1:192) %>% 
   as.matrix()
-  
-cols_sd_gbm <- matrixStats::colSds(laml_cnv_sd) %>% 
+
+cnv_tumor <- as.matrix(cnv_tumor)
+cnv_tumor_sd <- matrixStats::colSds(cnv_tumor) %>% 
   as.data.frame() %>% 
   setNames("sd") %>% 
-  subset(sd > 0.1)
+  subset(sd > 0.5)
 
-laml_cnv_sd <- laml_cnv_sd[,colnames(laml_cnv_sd) %in% rownames(cols_sd_gbm)]
+brca_rna_normal <- rna_counts[,1:96]
+brca_rna_tum <- rna_counts[,97:192]
 
-save(laml_cnv_sd1, file = "laml_cnv_sd.Rdata")
+cnv_tumor <- cnv_tumor[rownames(cnv_tumor) %in% rownames(rna_nocnv),]
+colnames(cnv_tumor) <- colnames(brca_rna_tum)
+
+save(luad_rna_sd, file = "rna_counts.Rdata")
 
 
 
+###----------------------------------------------------###
+### EdgeR DE test ###
+###----------------------------------------------------###
 
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation/")
+library(edgeR)
 
+rna_nocnv = read.csv('sim3_real_data/brca/rna_nocnv.csv', header=TRUE)
 
+metadata <- read.csv('sim3_real_data/metadata.csv', header=TRUE)
+rna_nocnv <- rna_nocnv %>% remove_rownames %>% column_to_rownames(var="X")
 
-                       
+# Round counts #
+rna_mixed_sim <- ceiling(rna_mixed_sim)
+rna_mixed_cnv <- ceiling(rna_mixed_cnv)
+
+#Creating a DGEList object
+gList <- DGEList(counts=rna_nocnv, genes=rownames(rna_nocnv))
+
+#Normalization
+gList <- calcNormFactors(gList, method="TMM")
+
+# Design matrix
+designMat <- model.matrix(~ condition, metadata)
+
+# Estimating dispersions
+gList <- estimateGLMCommonDisp(gList, design=designMat)
+gList <- estimateGLMTrendedDisp(gList, design=designMat)
+gList <- estimateGLMTagwiseDisp(gList, design=designMat)
+
+# Model fit
+fit <- glmFit(gList, designMat)
+lrt <- glmLRT(fit, coef=ncol(fit$design), contrast = NULL)
+edgeR_result <- topTags(lrt)
+res_edger <- topTags(lrt, n=20182)$table                       
+
+save(res_edger, file = "results/sim_3/brca/res1_edger.Rdata")

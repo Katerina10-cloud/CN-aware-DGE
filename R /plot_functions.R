@@ -160,20 +160,20 @@ library(tidyverse)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
-res4$diffexpressed <- "NO"
-res4$diffexpressed[res4$log2FoldChange > 0.5 & res4$padj < 0.05] <- "UP"
-res4$diffexpressed[res4$log2FoldChange < -0.5 & res4$padj < 0.05] <- "DOWN"
+res2$diffexpressed <- "NO"
+res2$diffexpressed[res2$log2FoldChange >= 1.0 & res2$padj < 0.05] <- "UP"
+res2$diffexpressed[res2$log2FoldChange <= -1.0 & res2$padj < 0.05] <- "DOWN"
 
-res3 <- res3[-c(3573, 356), ]
+res2 <- res2[-c(5086, 11402, 5087), ]
 
 #Make simple graphics
 p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-2, 2, 0.5))+
-  labs(title="DESeq2: CN signal",x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-12, 10, 2))+
+  labs(title="DESeq2: TCGA-BRCA",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -183,12 +183,12 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
 p1
 
 p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("black", "blue", "red"))+
-  scale_x_continuous(breaks = seq(-2, 2, 0.5))+
-  labs(title="DESeqCN: CN signal",x="effect size (log2)")+
+  scale_color_manual(values = c("blue", "black", "red"))+
+  scale_x_continuous(breaks = seq(-12, 10, 2))+
+  labs(title="DESeqCN: TCGA-BRCA",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -262,7 +262,7 @@ p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed
 p6
 
 #Plots
-gridExtra::grid.arrange(p1, p2, p3,p4, nrow = 2)
+gridExtra::grid.arrange(p1, p2, nrow = 1)
 #grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
 
@@ -321,20 +321,20 @@ scatter_plot
 #BiocManager::install("metaseqR2")
 library(metaseqR2)
 
-p1 <- matrix(res1$padj)
-colnames(p1) <- "DESeq2"
-p2 <- matrix(res4$padj)
+p1 <- matrix(res_edger$FDR)
+colnames(p1) <- "edgeR"
+p2 <- matrix(res2$padj)
 colnames(p2) <- "DESeqCN"
 p <- cbind(p1,p2)
 
-res1 <- res1 %>% 
+res_edger <- res_edger %>% 
   mutate(truth = case_when(
-    log2FoldChange > 0.5 & padj < 0.05 ~ "1",
-    log2FoldChange < -0.5 & padj < 0.05 ~ "1",
-    log2FoldChange <= 0.5 | log2FoldChange >= -0.5 & padj >= 0.05 ~ "0")) 
+    logFC >= 1.0 & FDR < 0.05 ~ "1",
+    logFC <= -1.0 & FDR < 0.05 ~ "1",
+    logFC < 1.0 | logFC > -1.0 & FDR >= 0.05 ~ "0")) 
 
-truth <- as.vector(as.numeric(res1$truth))
-names(truth) <- res1$X
+truth <- as.vector(as.numeric(res_edger$truth))
+names(truth) <- res_edger$X
 
 metaseqR2::diagplotRoc(truth = truth, p = p1, sig = 0.05, x = "fpr",
                        y = "tpr", path = NULL, draw = TRUE)
