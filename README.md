@@ -68,3 +68,13 @@ rna_cnv <- rna_counts * cnv
 $`\sigma(CN_{ij}) | \log(\frac{CN_{ij}}{2}) = \tau`$
 
 $`\sigma(CN_{ij}) = \frac{2\exp^\tau}{1+\exp^\tau}`$
+
+
+
+## References
+
+1. Michael I Love, Wolfgang Huber, and Simon Anders. Moderated estimation of fold change and dispersion for rna-seq data with deseq2. Genome biology, 15(12):1–21, 2014. doi:10.1186/s13059-014-0550-8.
+
+2.Boris Muzellec, Maria Telenczuk, Vincent Cabeli, and Mathieu Andreux. Pydeseq2: a python package for bulk rna-seq differential expression analysis. bioRxiv, pages 2022–12, 2022. doi:10.1101/2022.12.14.520412.
+
+3. Anqi Zhu, Joseph G Ibrahim, and Michael I Love. Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences. Bioinformatics, 35(12):2084–2092, 2019. doi:10.1093/bioinformatics/bty895.
