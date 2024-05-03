@@ -1,4 +1,4 @@
-# Copy-Number-aware Differential Gene Expression
+# Copy-Number-aware Differential Gene Expression (DGE)
 
 ## Overview
 
@@ -33,11 +33,11 @@ $`H_0 : \beta_{1i} = 0`$  vs  $`H_1: \beta_{1i} \neq 0`$
 
 
 
-## Data simulation
+## DE simulation
 
-RNA counts are simulated using *OmicsSIMLA* simulator using normal gene expression profiles: <https://omicssimla.sourceforge.io/download.html>
+RNA counts are simulated using *OmicsSIMLA* simulator, in particular, normal gene expression profiles: <https://omicssimla.sourceforge.io/download.html>
 
-Copy Number data are simulated using TCGA cancer data + custom sampling method.
+Copy Number data are simulated using TCGA CN gene specific cancer data + using custom sampling method.
 
 Differential gene expression (tumor-normal) is simulated by introducing CN multiplicative signal into RNA data.
 
@@ -62,4 +62,8 @@ cnv <- apply(cnv, 1, function(x) x+10e-9)
 rna_cnv <- rna_counts * cnv
 
 ```
+### CN saturation (sigmoid curve)
 
+$`\sigma(CN_{ij}) | \log(\frac{CN_{ij}}{2}) = \tau`$
+
+$`\sigma(CN_{ij}) = \frac{2\exp^\tau}{1+\exp^\tau})`$
