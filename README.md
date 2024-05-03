@@ -18,11 +18,11 @@ $`\log(q_{ij}) = \beta_{i0} X_{j0} \displaystyle (\frac{CN_{ij}}{2}) + \beta_{i1
 
 $`K_{ij} =`$ mRNA counts
 
-$`CN_{ij} =`$ copy number
+$`CN_{ij} =`$ copy number integers (0,1,2,...,5)
 
-$`X_j = [1, X_{j1}] = `$ covariate vector (design matrix)
+$`X_j = [1, X_{j1}] = `$ covariate vector (design matrix including intercept)
 
-$`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector
+$`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector (base level, effect size)
 
 $`s_j =`$ library size factor
 
