@@ -38,7 +38,7 @@ $`H_0 : \beta_{1i} = 0`$  vs  $`H_1: \beta_{1i} \neq 0`$
 
 RNA counts are simulated using *OmicsSIMLA* simulator, in particular, normal gene expression profiles: <https://omicssimla.sourceforge.io/download.html>
 
-Copy Number data are simulated using TCGA CN gene specific cancer data + using custom sampling method.
+Copy Number data are simulated using TCGA CN gene specific cancer data + using sampling method.
 
 Differential gene expression (tumor-normal) is simulated by introducing CN multiplicative signal into RNA data.
 
