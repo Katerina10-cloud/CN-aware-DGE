@@ -10,19 +10,26 @@ transcriptional patterns of cancer.
 ## Metodological design
 The focus is to combine RNA-seq and Copy Number cancer data in the DE analysis context using *Generalized Linear Model (GLM)* to model the *mean* and *dispersion* of gene counts using *Negative Binomial* distribution as a *log linear function* of the covariates.
 
-$`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$
-$`\mu_i_j = s_j q_i_j`$ 
+$`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$ 
+
+$`\mu_{ij} = s_j q_{ij}`$  
+
 $`\log(q_{ij}) = \beta_{i0} X_{j0} \displaystyle \frac{CN_{ij}}{2} + \beta_{i1} X_{j1}`$ 
+
 $`K_{ij} = mRNA counts`$ 
+
 $`CN_{ij} = copy number`$ 
+
 $`X_j = [1, X_{j1}] = covariate vector (design matrix)`$ 
+
 $`\beta_i = [\beta_{j0}, \beta_{i1}]= regression coefficient vector`$ 
+
 $`s_j = library size factor`$
 
 
-*Statistical testing (Wald test)*
+*Statistical testing (Wald test)*:
 
-$`H_0 : \beta_{1i} = 0 vs H_1: \beta_{1i} \neq 0`$
+$`H_0 : \beta_{1i} = 0  vs  H_1: \beta_{1i} \neq 0`$
 
 
 
