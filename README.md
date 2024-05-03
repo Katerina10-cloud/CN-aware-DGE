@@ -27,6 +27,7 @@ $`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector
 $`s_j =`$ library size factor
 
 
+
 *Statistical testing (Wald test)*:
 
 $`H_0 : \beta_{1i} = 0`$  vs  $`H_1: \beta_{1i} \neq 0`$
