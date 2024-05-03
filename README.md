@@ -10,21 +10,20 @@ transcriptional patterns of cancer.
 ## Metodological design
 The focus is to combine RNA-seq and Copy Number cancer data in the DE analysis context using *Generalized Linear Model (GLM)* to model the *mean* and *dispersion* of gene counts using *Negative Binomial* distribution as a *log linear function* of the covariates.
 
-$$K \sim NB(mean = \mu_i_j, dispersion = \alpha_i)$$
-
-$$\mu_i_j = s_j q_i_j$$
-
-$$\log(q_i_j) = \beta_i_0 X_j_0 \displaystyle \frac{CN_i_j}{2} + \beta_i_1 X_j_1$$
-
-$K_i_j =$ mRNA counts
-$CN_i_j =$ copy number
-$X_j = [1, X_j_1]=$ covariate vector (design matrix)
-$\beta_i = [\beta_i_0, \beta_i_1]=$ regression coeffizient vector
-$s_j =$ library size factor
+\begin{align*}
+K \sim NB(mean = \mu_i_j, dispersion = \alpha_i) \\
+\mu_i_j = s_j q_i_j \\
+\log(q_i_j) = \beta_i_0 X_j_0 \displaystyle \frac{CN_i_j}{2} + \beta_i_1 X_j_1 \\
+K_i_j = mRNA counts \\
+CN_i_j = copy number \\
+X_j = [1, X_j_1]= covariate vector (design matrix) \\
+\beta_i = [\beta_i_0, \beta_i_1]= regression coefficient vector \\
+s_j = library size factor
+\end{align*}
 
 *Statistical testing (Wald test)*
 
-$$H_0 : \beta_1_i = 0 vs H_1: \beta_1_i \neq 0$$
+H_0 : \beta_1_i = 0 vs H_1: \beta_1_i \neq 0
 
 
 
