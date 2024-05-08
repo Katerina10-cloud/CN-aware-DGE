@@ -2,11 +2,12 @@
 ### Simulate RNAseq counts ###
 ###------------------------------------------------------------###
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation/sim4_omics/")
 
 library(tidyverse)
 library(compcodeR)
 
+# Using compcodeR simulator
 rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 15000, 
                                                    samples.per.cond = 36, n.diffexp = 0, 
                                                    repl.id = 1, seqdepth = 1e7, 
@@ -25,8 +26,19 @@ rna_counts_sim <- rna_counts_sim@count.matrix
 rna_normal <- luad_rna_sd %>% as.data.frame() %>% select(1:45)
 rna_tumor <- luad_rna_sd %>% as.data.frame() %>% select(46:90)
 rna_counts <- cbind(brca_rna_normal, brca_rna_tum)
-metadata <- data.frame(patID = colnames(rna_counts),
-                       condition = rep(c("A", "B"), each = 96))
+
+# Using OmicsSIMLA
+rna_counts_sim1 <- read.table("rna_luad1.tsv", header = TRUE, sep = "")
+rna_counts_sim2 <- read.table("rna_luad2.tsv", header = TRUE, sep = "")
+
+rna_counts_sim2 <- rna_counts_sim2[,c(1:5000)]
+rna_counts_sim2 <- rna_counts_sim2 %>% remove_rownames %>% column_to_rownames(var="FAM")
+colnames(rna_counts_sim) <- paste0("S", 1:(ncol(rna_counts_sim)))
+rownames(rna_counts_sim) <- paste("G", 1:(nrow(rna_counts_sim)))
+
+# Generate metadata
+metadata <- data.frame(patID = colnames(rna_counts_sim),
+                       condition = rep(c("A", "B"), each = 36))
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
 
 
@@ -34,47 +46,33 @@ metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID")
 ### Simulate CN data ###
 ###-----------------------------------------------------------###
 
-### Generate Copy Number homogeneous data ###
-group0 <- rna_normal[1:1000,]
-group1 <- rna_normal[1001:2500,]
-group2 <- rna_normal[2501:12500,]
-group3 <- rna_normal[12501:16500,]
-group4 <- rna_normal[16501:18500,]
-group5 <- rna_normal[18501:20000,]
-
-cnv0 <- matrix(0.5, nrow(group0), 50)
-cnv1 <- matrix(1, nrow(group1), 50)
-cnv2 <- matrix(2, nrow(group2), 50)
-cnv3 <- matrix(3, nrow(group3), 50)
-cnv4 <- matrix(4, nrow(group4), 50)
-cnv5 <- matrix(5, nrow(group5), 50)
-
-cnv_tumor <- rbind(cnv0, cnv1, cnv2, cnv3, cnv4, cnv5)
-rna_normal <- rbind(group0, group1, group2, group3, group4, group5)
-
-
 ### Generate heterogeneous CN data ### 
 cnv_0 <- sapply(1:36, function(x) sample(x=c(0.5,1,2,3), size = 500, replace=TRUE, prob = c(.50, .30, .10, .10)))
 cnv_1 <- sapply(1:36, function(x) sample(x=c(0.5,1,2,3), size = 500, replace=TRUE, prob = c(.20, .60, .10, .10)))
-cnv_3 <- sapply(1:50, function(x) sample(x=c(0.5,1,2,3,4), size = 700, replace=TRUE, prob = c(.05, .05, .15, .70, .05)))
-cnv_4 <- sapply(1:50, function(x) sample(x=c(0.5,1,2,3,4,5), size = 700, replace=TRUE, prob = c(.05, .05, 0.10, 0.10, .60, .10)))
-cnv_5 <- sapply(1:50, function(x) sample(x=c(1,2,3,4,5), size = 400, replace=TRUE, prob = c(.05, .05, 0.10, .10, .70)))
-cnv_2 <- sapply(1:36, function(x) sample(x=c(1,2,3,4,5), size = 11000, replace=TRUE, prob = c(.05, .80, .05, .05, .05)))
+#cnv_3 <- sapply(1:50, function(x) sample(x=c(0.5,1,2,3,4), size = 700, replace=TRUE, prob = c(.05, .05, .15, .70, .05)))
+#cnv_4 <- sapply(1:50, function(x) sample(x=c(0.5,1,2,3,4,5), size = 700, replace=TRUE, prob = c(.05, .05, 0.10, 0.10, .60, .10)))
+#cnv_5 <- sapply(1:50, function(x) sample(x=c(1,2,3,4,5), size = 400, replace=TRUE, prob = c(.05, .05, 0.10, .10, .70)))
+cnv_2 <- sapply(1:36, function(x) sample(x=c(1,2,3,4), size = 11000, replace=TRUE, prob = c(.05, .70, .10, .10)))
 
-#cnv_tumor <- rbind(laml_cnv_sd1, cnv_heterog_2)
+rna_normal <- rna_counts_sim[1:36]
+rna_tumor <- rna_counts_sim[37:72]
 
-rna_normal <- luad_rna_sd[1:45]
-rna_tumor <- luad_rna_sd[46:90]
-cnv_norm <- matrix(2, nrow(rna_normal), 45)
+cnv_luad <- cnv_luad[1:3000,]
+cnv_tumor <- rbind(cnv_luad, cnv_0, cnv_1, cnv_2) %>% as.matrix()
+cnv_norm <- matrix(2, nrow(rna_normal), 36)
 
 colnames(cnv_norm) <- colnames(rna_normal)
 rownames(cnv_norm) <- rownames(rna_normal)
 
-cnv_tumor <- as.matrix(cnv_tumor) 
-cnv_tumor <- cnv_tumor/2   
+#cnv <- list(cnv_norm, cnv_tumor) 
 cnv <- cbind(cnv_tumor, cnv_norm)
-cnv <- cnv + 10e-9
-rna_cnv <- rna_counts * cnv
+
+
+## Prepare CN data ##
+cnv <- apply(cnv, 1, function(x) x/2)
+cnv <- apply(cnv, 1, function(x) x+10e-9)
+
+rna_cnv <- rna_nocnv * cnv
 
 
 ## Reverse dosage simulation ##
@@ -135,15 +133,10 @@ hist(rowMeans(cnv_tumor),
      breaks = 20)
 
 
-write.csv(metadata, file = "sim3_real_data/brca/metadata.csv")
-write.csv(luad_rna_sd, file = "rna_luad.csv")
+write.csv(metadata, file = "metadata.csv")
+write.csv(rna_cnv, file = "rna_cnv.csv")
 
-save(brca_rna_tum, file = "brca_rna_tumor.Rdata")
-
-#laml_cnv_sd1 <- laml_cnv_sd1[1:3000,]
-#colnames(cnv_heterog_2) <- colnames(rna_tumor)
-#cnv_heterog_2 <- as.data.frame(cnv_heterog_2)
-#rownames(cnv_heterog_2) <- paste0(1:(nrow(cnv_heterog_2)))
+save(cnv, file = "sim_OmicsSIMLA/cnv_sim.Rdata")
 
 
 ### CN saturation curve ###
@@ -153,9 +146,9 @@ sigma <- (2*exp(cn)) / (1+exp(cn))
 plot(x = log(cn), y = log(sigma), col = 4, type = "b", main = "CN saturation curve")
 
 cn <- seq(from = 0, to= 30, 1)
-rna <- seq(from = 0, to = 600, 20)
-rna_cn <- rna * cn
-plot(x = log(cn), y = log(rna), col = 4, type = "b", main = "RNA vs CN")
+rna <- seq(from = 20, to = 600, 50)
+rna_cn <- rna * sigma
+plot(x = log(cn), y = log(rna_cn), col = 4, type = "b", main = "RNA vs CN")
 
 
 

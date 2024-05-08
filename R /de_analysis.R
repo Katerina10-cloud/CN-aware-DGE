@@ -12,7 +12,9 @@ library(DESeq2)
 #Exploration of CNV and RNAseq data 
 #source("../code/utils.R")
 
-res1 = read.csv('results/sim_3/brca/res1_nocnv.csv',header=TRUE)
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation/results/sim_4")
+
+res2 = read.csv('res_sim_cnv.csv',header=TRUE)
 
 
 #Data preprocessing
@@ -181,15 +183,15 @@ library(edgeR)
 
 rna_nocnv = read.csv('sim3_real_data/brca/rna_nocnv.csv', header=TRUE)
 
-metadata <- read.csv('sim3_real_data/metadata.csv', header=TRUE)
+metadata <- read.csv('metadata.csv', header=TRUE)
 rna_nocnv <- rna_nocnv %>% remove_rownames %>% column_to_rownames(var="X")
 
 # Round counts #
-rna_mixed_sim <- ceiling(rna_mixed_sim)
-rna_mixed_cnv <- ceiling(rna_mixed_cnv)
+rna_cnv <- ceiling(rna_cnv)
+rna_cnv <- ceiling(rna_cnv)
 
 #Creating a DGEList object
-gList <- DGEList(counts=rna_nocnv, genes=rownames(rna_nocnv))
+gList <- DGEList(counts=rna_cnv, genes=rownames(rna_cnv))
 
 #Normalization
 gList <- calcNormFactors(gList, method="TMM")
@@ -206,6 +208,6 @@ gList <- estimateGLMTagwiseDisp(gList, design=designMat)
 fit <- glmFit(gList, designMat)
 lrt <- glmLRT(fit, coef=ncol(fit$design), contrast = NULL)
 edgeR_result <- topTags(lrt)
-res_edger <- topTags(lrt, n=20182)$table                       
+res_edger <- topTags(lrt, n=15000)$table                       
 
 save(res_edger, file = "results/sim_3/brca/res1_edger.Rdata")

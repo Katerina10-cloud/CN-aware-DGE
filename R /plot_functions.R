@@ -172,23 +172,23 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-12, 10, 2))+
-  labs(title="DESeq2: TCGA-BRCA",x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-2, 4, 1))+
+  labs(title="DESeq2: simulated RNA counts",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 10, color = "black")+
+  font("xy.text", size = 15, color = "black")+
   font("xlab", size = 10)+
   font("ylab", size = 10)+
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p1
 
-p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(pvalue), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-12, 10, 2))+
-  labs(title="DESeqCN: TCGA-BRCA",x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-2, 2, 1))+
+  labs(title="DESeqCN: simulated RNA",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
