@@ -9,28 +9,30 @@ setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CN-aware-DGE/simulation")
 
 library(tidyverse)
 library(compcodeR)
+library(DESeq2)
 ```
 
 ## Using compcodeR simulator
 
 
 ```{r}
-rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 15000, 
-                                                   samples.per.cond = 36, 
-                                                   n.diffexp = 0, 
+rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 12000, 
+                                                   samples.per.cond = 20, 
+                                                   n.diffexp = 1400, 
                                                    repl.id = 1, seqdepth = 1e7, 
-                                                   fraction.upregulated = 0.0, 
-                                                   between.group.diffdisp = TRUE, 
+                                                   fraction.upregulated = 700, 
+                                                   #between.group.diffdisp = FALSE, 
                                                    filter.threshold.total = 1, 
                                                    filter.threshold.mediancpm = 0, 
                                                    fraction.non.overdispersed = 0, 
-                                                   relmeans = "auto",
-                                                   dispersions = "auto",
-                                                   random.outlier.high.prob = 20,
-                                                   random.outlier.low.prob = 20,
+                                                   relmeans = mean,
+                                                   dispersions = dispersion,
+                                                   random.outlier.high.prob = 0,
+                                                   random.outlier.low.prob = 0,
+                                                   effect.size = 1.5,
                                                    output.file = "rna_counts_sim.rds")
 
-#rna_counts_sim <- rna_counts_sim@count.matrix
+rna_counts_sim <- rna_counts_sim@count.matrix
 #rna_normal <- luad_rna_sd %>% as.data.frame() %>% select(1:45)
 #rna_tumor <- luad_rna_sd %>% as.data.frame() %>% select(46:90)
 #rna_counts <- cbind(brca_rna_normal, brca_rna_tum)
@@ -42,12 +44,12 @@ rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n
 library(DESeq2)
 
 deseq_sim <- makeExampleDESeqDataSet(
-  n = 15000,
-  m = 72,
+  n = 12000,
+  m = 40,
   betaSD = 0,
   interceptMean = 6,
   interceptSD = 2,
-  dispMeanRel = function(x) 4/x + 0.1
+  dispMeanRel = function(x) 6/x + 0.6
   #sizeFactors = rep(1, m)
 )
 ```
@@ -59,23 +61,74 @@ item{interceptSD}{the standard deviation of the intercept betas (log2 scale)}
 item{dispMeanRel}{a function specifying the relationship of the dispersions on code{2^trueIntercept}}
 item{sizeFactors}{multiplicative factors for each sample}
 
-Constructs a simulated dataset of Negative Binomial data from two conditions. By default, there are no fold changes between
-the two conditions, but this can be adjusted with the \code{betaSD} argument.
+```{r}
+# Generate metadata
+metadata <- data.frame(patID = colnames(rna_counts),
+                       condition = rep(c("0", "1"), each = 20))
+metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
+```
+
+```{r}
+# DESeq2 fit
+dds <- DESeqDataSetFromMatrix(countData = rna_cnv,
+                              colData = metadata,
+                              design= ~ condition)
+dds <- DESeq(dds)
+```
+```{r}
+#extract results from dds object
+res <- results(dds1, name="condition_B_vs_A") %>% as.data.frame()
+```
+```{r}
+rna_dds_sim <- deseq_sim@assays@data@listData[["counts"]]
+rownames(rna_dds_sim) <- paste0("G", 1:(nrow(rna_dds_sim)))
+rna_normal <- rna_dds_sim[,1:20] %>% as.data.frame()
+rna_tumor <- rna_dds_sim[,21:40] %>% as.data.frame()
+rna_counts <- cbind(rna_normal, rna_tumor)
+```
+
+
+```{r}
+# CNV simulation
+cnv_tumor <- as.matrix(luad_cnv_sd)
+cnv_tumor_sd <- matrixStats::colSds(cnv_tumor) %>% 
+  as.data.frame() %>% 
+  setNames("sd") %>% 
+  subset(sd > 1.8)
+
+cnv_tumor <- cnv_tumor[,colnames(cnv_tumor) %in% rownames(cnv_tumor_sd)]
+cnv_tumor <- cnv_tumor[1:3000,]
+cnv_tumor <- replace(cnv_tumor, cnv_tumor>10, 10)
+
+colnames(cnv_tumor) <- colnames(rna_tumor)
+rownames(cnv_tumor) <- paste0("G", 1:(nrow(cnv_tumor)))
+
+cnv_0 <- sapply(1:20, function(x) sample(x=c(0.5,1,2,3), size = 300, replace=TRUE, prob = c(.50, .30, .10, .10)))
+cnv_1 <- sapply(1:20, function(x) sample(x=c(0.5,1,2,3), size = 300, replace=TRUE, prob = c(.20, .60, .10, .10)))
+cnv_2 <- sapply(1:20, function(x) sample(x=c(1,2,3,4), size = 8400, replace=TRUE, prob = c(.05, .70, .10, .10)))
+cnv_tumor <- rbind(cnv_tumor, cnv_0, cnv_1, cnv_2) %>% as.matrix()
+cnv_norm <- matrix(2, nrow(rna_normal), 20)
+
+colnames(cnv_norm) <- colnames(rna_normal)
+rownames(cnv_norm) <- rownames(rna_normal)
+
+cnv <- cbind(cnv_norm, cnv_tumor)
+cnv <- apply(cnv, 2, function(x) x/2)
+
+rownames(cnv) <- paste0("G", 1:(nrow(cnv)))
+```
+
+
+```{r}
+cnv <- cbind(cnv_tumor, cnv_norm)
+cnv <- apply(cnv, 2, function(x) x/2)
+rna_cnv <- rna_mixed * cnv
+rna_cnv <- ceiling(rna_cnv)
+```
 ```{r}
 dds <- estimateSizeFactors(deseq_sim)
 plotSparsity(dds)
 
-dds <- estimateDispersions(dds)
-plotDispEsts(dds)
-```
-
-```{r}
-rna_counts <- deseq_sim@assays@data@listData[["counts"]]
-
-# Generate metadata
-metadata <- data.frame(patID = colnames(rna_counts),
-                       condition = rep(c("A", "B"), each = 36))
-metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
 ```
 
 ## Using OmicsSIMLA
@@ -90,36 +143,26 @@ colnames(rna_counts_sim) <- paste0("S", 1:(ncol(rna_counts_sim)))
 rownames(rna_counts_sim) <- paste("G", 1:(nrow(rna_counts_sim)))
 ```
 
-##  Simulate CN data
-
-```{r}
-### Generate heterogeneous CN data ### 
-cnv_0 <- sapply(1:36, function(x) sample(x=c(0.5,1,2,3), size = 500, replace=TRUE, prob = c(.50, .30, .10, .10)))
-cnv_1 <- sapply(1:36, function(x) sample(x=c(0.5,1,2,3), size = 500, replace=TRUE, prob = c(.20, .60, .10, .10)))
-cnv_2 <- sapply(1:36, function(x) sample(x=c(1,2,3,4), size = 11000, replace=TRUE, prob = c(.05, .70, .10, .10)))
-```
-
-
-```{r}
-rna_normal <- rna_counts_sim[1:36]
-rna_tumor <- rna_counts_sim[37:72]
-
-cnv_luad <- cnv_luad[1:3000,]
-cnv_tumor <- rbind(cnv_luad, cnv_0, cnv_1, cnv_2) %>% as.matrix()
-cnv_norm <- matrix(2, nrow(rna_normal), 36)
-
-colnames(cnv_norm) <- colnames(rna_normal)
-rownames(cnv_norm) <- rownames(rna_normal)
-
-cnv <- cbind(cnv_tumor, cnv_norm)
-```
-
-
 ```{r}
 ## Prepare CN data ##
 cnv <- apply(cnv, 1, function(x) x/2)
 cnv <- apply(cnv, 1, function(x) x+10e-9)
 
 rna_cnv <- rna_nocnv * cnv
+```
+```{r}
+# Simulation of CN independent expression
+rna_tumor <- rna_counts[,21:40]
+rna_normal <- rna_counts[,1:20]
+#rna_up <- rna_tumor[1:300,]*2.5
+rna_cn <- rna_tumor[1:3600,]
+#rna_down <- rna_tumor[3301:3600,]/2.5
+rna_oth_up <- rna_tumor[3601:4600,]*2
+rna_oth_down <- rna_tumor[4601:5600,]/2
+rna_dip <- rna_tumor[5601:12000,]
+rna_tumor_mix <- rbind(rna_cn, rna_oth_up, rna_oth_down, rna_dip)
+rna_mixed <- cbind(rna_normal, rna_tumor_mix)
+rna_mixed <- ceiling(rna_mixed)
+
 ```
 

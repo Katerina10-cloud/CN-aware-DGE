@@ -158,11 +158,11 @@ rna_counts <- transform(rna_counts, sd=apply(rna_counts, 1, sd, na.rm=TRUE)) %>%
   select(1:192) %>% 
   as.matrix()
 
-cnv_tumor <- as.matrix(cnv_tumor)
+cnv_tumor <- as.matrix(luad_cnv_sd)
 cnv_tumor_sd <- matrixStats::colSds(cnv_tumor) %>% 
   as.data.frame() %>% 
   setNames("sd") %>% 
-  subset(sd > 0.5)
+  subset(sd > 1.8)
 
 brca_rna_normal <- rna_counts[,1:96]
 brca_rna_tum <- rna_counts[,97:192]

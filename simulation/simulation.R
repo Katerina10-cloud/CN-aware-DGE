@@ -128,7 +128,7 @@ hist(rowMeans(cnv_sim_luad))
 
 ### Frequency histogram ###
 hist(rowMeans(cnv_tumor),
-     main = "CNV frequency TCGA-BRCA (20 000 genes)", 
+     main = "CN simulation (12 000 genes)", 
      xlab = "CN state",
      breaks = 20)
 
@@ -151,7 +151,7 @@ rna_cn <- rna * sigma
 plot(x = log(cn), y = log(rna_cn), col = 4, type = "b", main = "RNA vs CN")
 
 
-
-
+cnv <- as.data.frame(cnv)
+rna_cnv <- rna_counts * cnv
 
 

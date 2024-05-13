@@ -160,9 +160,9 @@ library(tidyverse)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
-res2$diffexpressed <- "NO"
-res2$diffexpressed[res2$log2FoldChange >= 1.0 & res2$padj < 0.05] <- "UP"
-res2$diffexpressed[res2$log2FoldChange <= -1.0 & res2$padj < 0.05] <- "DOWN"
+res5$diffexpressed <- "NO"
+res5$diffexpressed[res5$log2FoldChange >= 1.0 & res5$padj < 0.05] <- "UP"
+res5$diffexpressed[res5$log2FoldChange <= -1.0 & res5$padj < 0.05] <- "DOWN"
 
 res2 <- res2[-c(5086, 11402, 5087), ]
 
@@ -171,12 +171,12 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
+  scale_color_manual(values = c("gray", "gray", "red"))+
   scale_x_continuous(breaks = seq(-2, 4, 1))+
   labs(title="DESeq2: simulated RNA counts",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 15, color = "black")+
+  font("xy.text", size = 10, color = "black")+
   font("xlab", size = 10)+
   font("ylab", size = 10)+
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
@@ -186,9 +186,9 @@ p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(pvalue), col = diff
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-2, 2, 1))+
-  labs(title="DESeqCN: simulated RNA",x="effect size (log2)")+
+  scale_color_manual(values = c("blue", "gray", "red"))+
+  scale_x_continuous(breaks = seq(-3, 3, 1))+
+  labs(title="DESeq2: CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -198,12 +198,12 @@ p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(pvalue), col = diff
 p2
 
 p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 0.5))+
-  labs(title="DESeq2: mixed signals", x="effect size (log2)")+
+  scale_color_manual(values = c("gray", "gray", "red"))+
+  scale_x_continuous(breaks = seq(-3, 3, 1))+
+  labs(title="DESeqCN: CN signal", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -213,12 +213,12 @@ p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffex
 p3
 
 p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 0.5))+
-  labs(title="DESeqCN: mixed signals", x="effect size (log2)")+
+  scale_color_manual(values = c("blue", "gray", "red"))+
+  scale_x_continuous(breaks = seq(-3, 3, 1))+
+  labs(title="DESeq2: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -230,18 +230,18 @@ p4
 #res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
 #res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
   
-p5 <- ggplot(data = res_map_tum_norm, aes(x = B1_1, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
+p5 <- ggplot(data = res5, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(x="effect size (log2)")+
+  scale_color_manual(values = c("blue", "gray", "red"))+
+  scale_x_continuous(breaks = seq(-3, 3, 1))+
+  labs(title="DESeqCN: mixed signals", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
-  font("xy.text", size = 8, color = "black")+
-  font("xlab", size = 8)+
-  font("ylab", size = 8)
+  font("xy.text", size = 10, color = "black")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)
 p5
 
 #delete rows by name
@@ -262,7 +262,7 @@ p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed
 p6
 
 #Plots
-gridExtra::grid.arrange(p1, p2, nrow = 1)
+gridExtra::grid.arrange(p1, p2, p3, p4, p5, nrow = 2)
 #grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
 
@@ -320,23 +320,24 @@ scatter_plot
 
 #BiocManager::install("metaseqR2")
 library(metaseqR2)
+library(tidyverse)
 
-p1 <- matrix(res_edger$FDR)
-colnames(p1) <- "edgeR"
-p2 <- matrix(res2$padj)
+p1 <- matrix(res4$padj)
+colnames(p1) <- "DESeq2"
+p2 <- matrix(res5$padj)
 colnames(p2) <- "DESeqCN"
 p <- cbind(p1,p2)
 
-res_edger <- res_edger %>% 
+res5 <- res5 %>% 
   mutate(truth = case_when(
-    logFC >= 1.0 & FDR < 0.05 ~ "1",
-    logFC <= -1.0 & FDR < 0.05 ~ "1",
-    logFC < 1.0 | logFC > -1.0 & FDR >= 0.05 ~ "0")) 
+    log2FoldChange >= 1.0 & padj < 0.05 ~ "1",
+    log2FoldChange <= -1.0 & padj < 0.05 ~ "1",
+    log2FoldChange < 1.0 | log2FoldChange > -1.0 & padj >= 0.05 ~ "0")) 
 
-truth <- as.vector(as.numeric(res_edger$truth))
-names(truth) <- res_edger$X
+truth <- as.vector(as.numeric(res5$truth))
+names(truth) <- res5$X
 
-metaseqR2::diagplotRoc(truth = truth, p = p1, sig = 0.05, x = "fpr",
+metaseqR2::diagplotRoc(truth = truth, p = p2, sig = 0.05, x = "fpr",
                        y = "tpr", path = NULL, draw = TRUE)
 
 
