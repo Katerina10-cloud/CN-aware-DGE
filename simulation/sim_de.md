@@ -1,13 +1,9 @@
----
-title: "Copy-number-aware Differential Expression Simulation"
-output: html_document
-date: "2024-05-27"
----
+
+# Copy-number-aware Differential Expression Simulation
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
-
 ## Introduction
 
 This document gives some extra details regarding Differential Gene Expression (DGE) simulation informed by Copy Number (CN) signal.
