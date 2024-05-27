@@ -12,7 +12,7 @@ library(DESeq2)
 #Exploration of CNV and RNAseq data 
 #source("../code/utils.R")
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation/results/sim_4")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/TCGA/relationship_plot")
 
 res2 = read.csv('res_sim_cnv.csv',header=TRUE)
 
@@ -22,7 +22,7 @@ cnv_tumor <- cnv_tumor %>% remove_rownames %>% column_to_rownames(var="Row.names
 rna_norm <- rna_norm[(rownames(rna_norm) %in% rownames(cnv_tumor)),]
 res_rna_cnv <- res_rna_cnv %>% relocate(padj_2, .after = padj_1)
 
-cnv_tumor <- replace(cnv, cnv>5, 5)
+#cnv_tumor <- replace(cnv, cnv>5, 5)
 
 #Data save
 save(p6, file = "~/model_fit_Python/model_results/results_sinthetic_brca/p6.Rdata")
@@ -53,6 +53,22 @@ cnv_tumor <- luad_cnv_tumor %>% replace(cnv_tumor, cnv_tumor>5, 6) %>%
   select(1:10) %>%
   column_to_rownames(var="Row.names")
 
+#Formatter of column names#
+colnames(luad_rna_sd) <- gsub(pattern = "\\.", replacement = "-", colnames(luad_rna_sd))
+
+luad_tum <- luad_rna_sd %>% select(46:90)
+luad_norm <- luad_rna_sd %>% select(1:45)
+
+colnames(lihc_cnv) <- stringr::str_sub(colnames(lihc_cnv),1,12)
+lihc_tum <- lihc_rna_tum[,colnames(lihc_rna_tum) %in% colnames(lihc_cnv)]
+lihc_norm <- lihc_rna_norm[,colnames(lihc_rna_norm) %in% colnames(lihc_cnv)]
+
+x <- colnames(lihc_norm)
+names(lihc_norm) <- paste(x,"-11A")
+lihc_rna <- cbind(lihc_norm, lihc_tum)
+
+save(lihc_rna, file = "lihc_rna.Rdata")
+
 #Metadata generation
 rna_nor <- rna_normal %>% gsub("-", ".", rna_normal)
 rna_counts <- cbind(brca_rna_normal, brca_rna_tum)
@@ -77,31 +93,33 @@ rna_tumor <- rna_tumor * cnv_tum
 rna_cnv <- rna_counts * cnv
 
 #Counts normalization
-rna_normalized <- luad_rna %>%  as.matrix()
+brca_cnv <- apply(brca_cnv, 2, function(x) ifelse(x > 10, 10, x)) 
+rna_normalized <- lihc_rna %>%  as.matrix()
 rna_log_normalized <- DESeq2::rlog(rna_normalized)
 
 # Z-score trasformation
 rna_zscore <- t(scale(t(rna_log_normalized)))
-rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:10)
-rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% select(11:20) 
+rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% select(1:15)
+rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% select(16:30) 
 rna_zscore_normal <- rna_zscore_normal %>% as.data.frame() %>%
-  mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(11)
+  mutate(rna_mean = rowMeans(rna_zscore_normal)) %>% select(rna_mean)
 rna_zscore_tumor <- rna_zscore_tumor %>% as.data.frame() %>% 
-  mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(11)
+  mutate(rna_mean = rowMeans(rna_zscore_tumor)) %>% select(rna_mean)
 
-luad_cnv <- luad_cnv %>%
-  mutate(cnv_mean = rowMeans(luad_cnv))
+lihc_cnv <- lihc_cnv %>% as.data.frame() %>% 
+  mutate(cnv_mean = rowMeans(lihc_cnv))
 
 
 #CNV factorization
-cnv <- cnv %>% 
+cnv <- lihc_cnv %>% 
   mutate(cnv = case_when(
     cnv_mean <= 0.5 ~ "0",
     cnv_mean > 0.5 & cnv_mean <= 1.6 ~ "1",
     cnv_mean > 1.6 & cnv_mean <= 2.4 ~ "2",
     cnv_mean > 2.4 & cnv_mean <= 3.5 ~ "3",
     cnv_mean > 3.5 & cnv_mean <= 4.5 ~ "4",
-    cnv_mean > 4.5 ~ "5")) 
+    cnv_mean > 4.5 ~ "5")) %>% 
+  select(cnv)
 
 cnv <- cnv %>% 
   mutate(cn_group = case_when(
@@ -158,20 +176,17 @@ rna_counts <- transform(rna_counts, sd=apply(rna_counts, 1, sd, na.rm=TRUE)) %>%
   select(1:192) %>% 
   as.matrix()
 
-cnv_tumor <- as.matrix(luad_cnv_sd)
+cnv_tumor <- as.matrix(lihc_cnv_tum)
 cnv_tumor_sd <- matrixStats::colSds(cnv_tumor) %>% 
   as.data.frame() %>% 
-  setNames("sd") %>% 
-  subset(sd > 1.8)
+  setNames("sd")  %>% 
+  subset(sd > 1)
 
 brca_rna_normal <- rna_counts[,1:96]
 brca_rna_tum <- rna_counts[,97:192]
 
-cnv_tumor <- cnv_tumor[rownames(cnv_tumor) %in% rownames(rna_nocnv),]
+cnv_tumor <- cnv_tumor[,colnames(cnv_tumor) %in% rownames(cnv_tumor_sd)]
 colnames(cnv_tumor) <- colnames(brca_rna_tum)
-
-save(luad_rna_sd, file = "rna_counts.Rdata")
-
 
 
 ###----------------------------------------------------###

@@ -36,39 +36,11 @@ $`H_0 : \beta_{1i} = 0`$  vs  $`H_1: \beta_{1i} \neq 0`$
 
 ## DE simulation
 
-RNA counts are simulated using *OmicsSIMLA* simulator, in particular, normal gene expression profiles: <https://omicssimla.sourceforge.io/download.html>
-
-Copy Number data are simulated using TCGA CN gene specific cancer data + using sampling method.
-
-Differential gene expression (tumor-normal) is simulated by introducing CN multiplicative signal into RNA data.
-
-#### Example
-
-``` r
-cnv_1 <- sapply(1:36, function(x) sample(x=c(0.5,1,2,3), size = 500, replace=TRUE, prob = c(.20, .60, .10, .10)))
-cnv_2 <- sapply(1:36, function(x) sample(x=c(1,2,3,4), size = 11000, replace=TRUE, prob = c(.05, .70, .10, .10)))
-cnv_normal <- matrix(2, nrow(rna_normal), 36)
-cnv <- cbind(cnv_normal, cnv_tumor)
-
-```
-
-RNA counts matrix of normal sample group is multiplied by CN matrix of tumor samples.
-
-#### Example
-
-``` r
-cnv <- apply(cnv, 1, function(x) x/2)
-cnv <- apply(cnv, 1, function(x) x+10e-9)
-
-rna_cnv <- rna_counts * cnv
-
-```
 ##### CN saturation (sigmoid curve)
 
 $`\sigma(CN_{ij}) | \log(\frac{CN_{ij}}{2}) = \tau`$
 
 $`\sigma(CN_{ij}) = \frac{2\exp^\tau}{1+\exp^\tau}`$
-
 
 
 

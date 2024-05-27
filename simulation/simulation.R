@@ -2,7 +2,7 @@
 ### Simulate RNAseq counts ###
 ###------------------------------------------------------------###
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/de_fit_Python/data_simulation/sim4_omics/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/TCGA")
 
 library(tidyverse)
 library(compcodeR)
@@ -127,11 +127,14 @@ cnv_sim_luad <- cnv_sim_luad %>% as.tibble() %>% mutate_if(is.character, as.nume
 hist(rowMeans(cnv_sim_luad))
 
 ### Frequency histogram ###
-hist(rowMeans(cnv_tumor),
-     main = "CN simulation (12 000 genes)", 
+lihc_cnv <- apply(lihc_cnv, 2, function(x) ifelse(x > 10, 10, x)) 
+hist(rowMeans(lihc_cnv),
+     main = "LIHC", 
      xlab = "CN state",
-     breaks = 20)
-
+     ylab = "Proportion",
+     col = "#E1DEFC",
+     prob = TRUE,
+     breaks = 6)
 
 write.csv(metadata, file = "metadata.csv")
 write.csv(rna_cnv, file = "rna_cnv.csv")

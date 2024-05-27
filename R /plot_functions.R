@@ -1,10 +1,14 @@
 ###--------------------------------------------------------###
 ### Plots ###
 ###--------------------------------------------------------###
+install.packages("colorspace")
 
 library(ggplot2)
+library(colorspace)
 library(ggpubr)
 library(tidyverse)
+
+#hcl_palettes(plot = TRUE)
 
 ### Making barplot ###
 #row.names(cnv) <- 1:nrow(cnv) cnv[1:3]
@@ -26,13 +30,15 @@ plot <- ggplot(data=df, aes(x=gene_groups, y=frequency, fill=dge_groups)) +
 rna_zscore_tumor <- rna_zscore_tumor %>% mutate(sample_type = "Tumor")
 rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
 
-plot_data_1 <- cbind(rna_zscore_normal, cnv)  
-plot_data_1$cnv <- as.factor(plot_data_1$cnv)
+plot_data1_lihc <- cbind(rna_zscore_normal, cnv)  
+plot_data1_lihc$cnv <- as.factor(plot_data1_lihc$cnv)
+plot_data2_lihc <- cbind(rna_zscore_tumor, cnv) 
+plot_data2_lihc$cnv <- as.factor(plot_data2_lihc$cnv)
+plot_data_lihc <- rbind(plot_data1_lihc, plot_data2_lihc)
+plot_data2_lihc <- plot_data2_lihc %>% mutate(cancer_type = "LIHC")
 
-plot_data_2 <- cbind(rna_zscore_tumor, cnv) 
-plot_data_2$cnv <- as.factor(plot_data_2$cnv)
-plot_data <- rbind(plot_data_1, plot_data_2)
-
+plot_data_all <- rbind(plot_data_luad, plot_data_brca, plot_data_lihc)
+plot_data_tumor <- rbind(plot_data2_luad, plot_data2_brca, plot_data2_lihc)
 
 ### Boxplot ###
 
@@ -41,7 +47,7 @@ summary.stats <- plot_data_2 %>%
   group_by(cnv) %>%
   get_summary_stats() %>%
   select(cnv, n)
-summary.stats <- summary.stats[c(1,3,5,7,9),]
+#summary.stats <- summary.stats[c(1,3,5,7,9),]
 
 summary.plot <- ggsummarytable(
   summary.stats, x = "cnv", y = c("n"),
@@ -52,31 +58,42 @@ summary.plot
 
 #Create boxplot
 # The palette with grey:
-cbPalette <- c("#0072B2", "#D55E00", "#999999", "#E69F00", "#CC79A7", "#D55E00")
+#cbPalette <- c("#0072B2", "#999999","#E69F00", "#D55E00","#CC79A7")
+div <- qualitative_hcl(5, palette = "Warm")
 
-bxp1 <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = cnv)) + 
+bxp1 <- ggplot(plot_data_tumor, aes(x = cnv, y = rna_mean, fill = cnv)) + 
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch = TRUE)+
-  labs(title="CNV patterns and mRNA expression (LUAD)",x="CNV group", y = "mRNA Z-score")+
-  theme_classic()
-bxp1 <- bxp + scale_fill_manual(values=cbPalette)+
-  font("xy.text", size = 18, color = "black", face = "bold")+
-  font("title", size = 18, color = "black", face = "bold.italic")+
-  font("xlab", size = 16)+
-  font("ylab", size = 16)
+  geom_smooth(method = "lm", formula = y ~ x, se=FALSE, color="blue", aes(group=1))+
+  labs(x="CN group", y = "mRNA Z-score")+
+  facet_wrap(~cancer_type)+
+  theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
+  theme_bw()
+bxp1 <- bxp1 + scale_fill_manual(values=div)+
+  font("xy.text", size = 12, color = "black", face = "bold")+
+  font("title", size = 12, color = "black", face = "bold.italic")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 bxp1
 
 #Comparison boxplot Tumor vs Normal
-bxp2 <- ggplot(plot_data, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
+bxp2 <- ggplot(plot_data_all, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
-  labs(title="CNV patterns and mRNA expression (LUAD)",x="CNV group", y = "mRNA Z-score")+
-  #theme_classic()+
-  facet_wrap(~sample_type, ncol=5)
+  labs(x="CN group", y = "mRNA Z-score")+
+  theme_bw()+
+  facet_wrap(~cancer_type)
+bxp2 <- bxp2 + scale_fill_manual(values=c("#999999", "#E69F00"))+
+  font("xy.text", size = 12, color = "black", face = "bold")+
+  font("title", size = 12, color = "black", face = "bold.italic")+
+  font("xlab", size = 12)+
+  font("ylab", size = 12)
 bxp2
 
 ggarrange(
   bxp, summary.plot, ncol = 1, align = "v",
   heights = c(0.80, 0.20)
 )
+
+gridExtra::grid.arrange(bxp1, bxp2, nrow = 2)
 
 ###-------------------------------------------------------------------###
 ### Violin plot ###
