@@ -14,7 +14,7 @@ $`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$
 
 $`\mu_{ij} = O_{ij} q_{ij}`$  
 
-$`\O_{ij} = sf_j + log(\displaystyle (\frac{CN_{ij}}{2})) `$ 
+$`O_{ij} = sf_j + log\displaystyle (\frac{CN_{ij}}{2}) `$ 
 
 $`\log(q_{ij}) = \beta_{i0} X_{j0} + \beta_{i1} X_{j1}`$ 
 
