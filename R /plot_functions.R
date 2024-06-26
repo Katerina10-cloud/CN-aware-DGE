@@ -1,7 +1,7 @@
 ###--------------------------------------------------------###
 ### Plots ###
 ###--------------------------------------------------------###
-install.packages("colorspace")
+#install.packages("colorspace")
 
 library(ggplot2)
 library(colorspace)
@@ -58,7 +58,7 @@ summary.plot
 
 #Create boxplot
 # The palette with grey:
-#cbPalette <- c("#0072B2", "#999999","#E69F00", "#D55E00","#CC79A7")
+cbPalette <- c("#0072B2", "#999999","#E69F00", "#D55E00","#CC79A7")
 div <- qualitative_hcl(5, palette = "Warm")
 
 bxp1 <- ggplot(plot_data_tumor, aes(x = cnv, y = rna_mean, fill = cnv)) + 
@@ -177,20 +177,24 @@ library(tidyverse)
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
-res5$diffexpressed <- "NO"
-res5$diffexpressed[res5$log2FoldChange >= 1.0 & res5$padj < 0.05] <- "UP"
-res5$diffexpressed[res5$log2FoldChange <= -1.0 & res5$padj < 0.05] <- "DOWN"
+res$diffexpressed <- "NO"
+res$diffexpressed[res$logFC >= 1.0 & res$FDR < 0.05] <- "UP"
+res$diffexpressed[res$logFC <= -1.0 & res$FDR < 0.05] <- "DOWN"
 
-res2 <- res2[-c(5086, 11402, 5087), ]
+res_adj$diffexpressed <- "NO"
+res_adj$diffexpressed[res_adj$logFC >= 1.0 & res_adj$FDR < 0.05] <- "UP"
+res_adj$diffexpressed[res_adj$logFC <= -1.0 & res_adj$FDR < 0.05] <- "DOWN"
+
+#res <- res[-c(11602), ]
 
 #Make simple graphics
-p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("gray", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-2, 4, 1))+
-  labs(title="DESeq2: simulated RNA counts",x="effect size (log2)")+
+  scale_color_manual(values = c("blue", "gray", "red"))+
+  scale_x_continuous(breaks = seq(-5, 5, 1))+
+  labs(title="EdgeR: simulated RNA counts",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -199,20 +203,20 @@ p1 <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p1
 
-p2 <- ggplot(data = res2, aes(x = log2FoldChange, y = -log10(pvalue), col = diffexpressed)) +
+p2 <- ggplot(data = res_adj, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 1))+
-  labs(title="DESeq2: CN signal",x="effect size (log2)")+
+  scale_x_continuous(breaks = seq(-5, 3, 1))+
+  labs(title="EdgeR adj for CN signal",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
   font("xlab", size = 10)+
   font("ylab", size = 10)+
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-p2
+p1+p2
 
 p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
@@ -339,24 +343,101 @@ scatter_plot
 library(metaseqR2)
 library(tidyverse)
 
-p1 <- matrix(res4$padj)
-colnames(p1) <- "DESeq2"
-p2 <- matrix(res5$padj)
-colnames(p2) <- "DESeqCN"
+p1 <- matrix(atac$adjpval_devil)
+colnames(p1) <- "Devil"
+p2 <- matrix(atac$adjpval_glm)
+colnames(p2) <- "glmGamPoi"
 p <- cbind(p1,p2)
 
-res5 <- res5 %>% 
+res <- atac %>% 
   mutate(truth = case_when(
-    log2FoldChange >= 1.0 & padj < 0.05 ~ "1",
-    log2FoldChange <= -1.0 & padj < 0.05 ~ "1",
-    log2FoldChange < 1.0 | log2FoldChange > -1.0 & padj >= 0.05 ~ "0")) 
+    lfc_glm >= 1.0 & adjpval_glm <= 0.05 ~ "1",
+    lfc_glm <= -1.0 & adjpval_glm <= 0.05 ~ "1",
+    lfc_glm < 1.0 | lfc_glm > -1.0 & adjpval_glm > 0.05 ~ "0")) 
 
-truth <- as.vector(as.numeric(res5$truth))
-names(truth) <- res5$X
+truth <- as.vector(as.numeric(res$truth))
+names(truth) <- res$geneID
 
-metaseqR2::diagplotRoc(truth = truth, p = p2, sig = 0.05, x = "fpr",
+atac_roc <- metaseqR2::diagplotRoc(truth = truth, p = p, sig = 0.05, x = "fpr",
                        y = "tpr", path = NULL, draw = TRUE)
 
+
+
+### P-values and lfc comparison ###
+
+devil <- devil[devil$geneID %in% glm$geneID,]
+glm <- glm[glm$geneID %in% devil$geneID,]
+
+p_atac_devil <- devil %>% dplyr::select(geneID,adj_pval_snATAC)
+p_atac_glm <- glm %>% dplyr::select(geneID,adj_pval_snATAC)
+p_atac <- cbind(p_atac_devil, p_atac_glm)
+colnames(p_atac) <- c("geneID1", "adjpval_atac_devil", "geneID2", "adjpval_atac_glm" )
+
+pval_atac <- ggplot(p_atac, aes(x=adjpval_atac_glm, y=adjpval_atac_devil)) + 
+  #geom_point(shape=15, color="blue")+
+  geom_pointdensity(shape=20) +
+  #scale_color_viridis()+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "p-value snATAC")+
+  xlab("adjpval snATAC from glmGamPoi") +
+  ylab ("adjpval snATAC from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+p_rna_devil <- devil %>% dplyr::select(geneID,adj_pval_snRNA)
+p_rna_glm <- glm %>% dplyr::select(geneID,adj_pval_snRNA)
+p_rna <- cbind(p_rna_devil, p_rna_glm)
+colnames(p_rna) <- c("geneID1", "adjpval_rna_devil", "geneID2", "adjpval_rna_glm" )
+
+pval_rna<- ggplot(p_rna, aes(x=adjpval_rna_glm, y=adjpval_rna_devil)) + 
+  #geom_point(shape=15, color="blue")+
+  geom_pointdensity(shape=20) +
+  #scale_color_viridis()+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "p-value snRNA")+
+  xlab("adjpval snRNA from glmGamPoi") +
+  ylab ("adjpval snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+lfc_atac_devil <- devil %>% dplyr::select(geneID,lfc_snATAC)
+lfc_atac_glm <- glm %>% dplyr::select(geneID,lfc_snATAC)
+lfc_atac <- cbind(lfc_atac_devil, lfc_atac_glm)
+colnames(lfc_atac) <- c("geneID1", "lfc_atac_devil", "geneID2", "lfc_atac_glm" )
+
+p_lfc_atac <- ggplot(lfc_atac, aes(x=lfc_atac_glm, y=lfc_atac_devil)) + 
+  #geom_point(shape=15, color="blue")+
+  geom_pointdensity(shape=20) +
+  #scale_color_viridis()+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "log2FC snATAC")+
+  xlab("log2FC snATAC from glmGamPoi") +
+  ylab ("log2FC snATAC from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+
+lfc_rna_devil <- devil %>% dplyr::select(geneID,lfc_snRNA)
+lfc_rna_glm <- glm %>% dplyr::select(geneID,lfc_snRNA)
+lfc_rna <- cbind(lfc_rna_devil, lfc_rna_glm)
+colnames(lfc_rna) <- c("geneID1", "lfc_rna_devil", "geneID2", "lfc_rna_glm" )
+
+p_lfc_rna<- ggplot(lfc_rna, aes(x=lfc_rna_glm, y=lfc_rna_devil)) + 
+  #geom_point(shape=15, color="blue")+
+  geom_pointdensity(shape=20) +
+  #scale_color_viridis()+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "log2FC snRNA")+
+  xlab("log2FC snRNA from glmGamPoi") +
+  ylab ("log2FC snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+grid.arrange(pval_atac,p_lfc_atac,pval_rna,p_lfc_rna,  nrow = 2)
 
 
 

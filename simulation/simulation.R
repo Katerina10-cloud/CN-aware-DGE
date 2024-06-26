@@ -8,18 +8,18 @@ library(tidyverse)
 library(compcodeR)
 
 # Using compcodeR simulator
-rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 15000, 
-                                                   samples.per.cond = 36, n.diffexp = 0, 
+rna_counts_sim <- compcodeR::generateSyntheticData(dataset = "rna_counts_sim", n.vars = 11958, 
+                                                   samples.per.cond = 20, n.diffexp = 0, 
                                                    repl.id = 1, seqdepth = 1e7, 
                                                    fraction.upregulated = 0.0, 
-                                                   between.group.diffdisp = TRUE, 
+                                                   between.group.diffdisp = F, 
                                                    filter.threshold.total = 1, 
                                                    filter.threshold.mediancpm = 0, 
                                                    fraction.non.overdispersed = 0, 
-                                                   relmeans = "auto",
-                                                   dispersions = "auto",
-                                                   random.outlier.high.prob = 20,
-                                                   random.outlier.low.prob = 20,
+                                                   relmeans = intercept,
+                                                   dispersions = dispersion,
+                                                   random.outlier.high.prob = 0,
+                                                   random.outlier.low.prob = 0,
                                                    output.file = "rna_counts_sim.rds")
 
 rna_counts_sim <- rna_counts_sim@count.matrix
@@ -156,5 +156,4 @@ plot(x = log(cn), y = log(rna_cn), col = 4, type = "b", main = "RNA vs CN")
 
 cnv <- as.data.frame(cnv)
 rna_cnv <- rna_counts * cnv
-
 

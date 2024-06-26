@@ -44,19 +44,22 @@ rna_counts_sim <- rna_counts_sim@count.matrix
 
 ```{r}
 library(DESeq2)
-
-deseq_sim <- makeExampleDESeqDataSet(
-  n = 12000,
-  m = 40,
+m = 20
+sizeFactors = rep(1, m)
+deseq_sim <- DESeq2::makeExampleDESeqDataSet(
+  n = 100,
+  m = 20,
   betaSD = 0,
   interceptMean = 6,
   interceptSD = 2,
-  dispMeanRel = function(x) 6/x + 0.6
-  #sizeFactors = rep(1, m)
+  dispMeanRel = function(x) 6/x + 0.6,
+  sizeFactors = sizeFactors
 )
+
+rna_counts <- data.frame(deseq_sim@assays@data@listData[["counts"]])
 ```
-item{n}{number of rows}
-item{m}{number of columns}
+item{n}{number of genes}
+item{m}{number of replicates}
 item{betaSD}{the standard deviation for non-intercept betas, i.e. beta ~ N(0,betaSD)}
 item{interceptMean}{the mean of the intercept betas (log2 scale)}
 item{interceptSD}{the standard deviation of the intercept betas (log2 scale)}
@@ -65,8 +68,9 @@ item{sizeFactors}{multiplicative factors for each sample}
 
 ```{r}
 # Generate metadata
+
 metadata <- data.frame(patID = colnames(rna_counts),
-                       condition = rep(c("0", "1"), each = 20))
+                       condition = rep(c("0", "1"), each = 10))
 metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
 ```
 
@@ -126,11 +130,6 @@ cnv <- cbind(cnv_tumor, cnv_norm)
 cnv <- apply(cnv, 2, function(x) x/2)
 rna_cnv <- rna_mixed * cnv
 rna_cnv <- ceiling(rna_cnv)
-```
-```{r}
-dds <- estimateSizeFactors(deseq_sim)
-plotSparsity(dds)
-
 ```
 
 ## Using OmicsSIMLA
