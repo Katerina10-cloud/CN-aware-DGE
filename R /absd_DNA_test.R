@@ -5,6 +5,7 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "gridExtra", "ggpubr", "ggrepel",
           "DESeq2", "edgeR")
 sapply(pkgs, require, character.only = TRUE)
 
+### Test on simulated data ###
 
 # RNA counts simulation #
 m = 20
@@ -48,12 +49,14 @@ rownames(rna_counts) <- paste0("G", 1:(nrow(rna_counts)))
 rna_cnv <- rna_counts * cnv
 rna_cnv <- ceiling(rna_cnv)
 
+#lib.size <- colSums(rna_cnv, na.rm=T)
+
 # Fit the NB GLMs #
 design <- model.matrix(~1+condition, data=metadata)
 edger.obj <- edgeR::DGEList(rna_cnv)
 edger.obj <- edgeR::calcNormFactors(edger.obj, method="TMM")
-#edger.obj <- edgeR::estimateDisp(edger.obj, design)
-fit <- edgeR::glmFit(edger.obj, design, dispersion=0.05)
+edger.obj <- edgeR::estimateDisp(edger.obj, design)
+fit <- edgeR::glmFit(edger.obj, design)
 lrt <- edgeR::glmLRT(fit, coef=2)
 res <- topTags(lrt, n=1000)$table
 #glmz <- -sign(lrt$table$logFC)*abs(qnorm(lrt$table$PValue/2))
@@ -61,12 +64,17 @@ res <- topTags(lrt, n=1000)$table
 #res <- lrt[["table"]]
 #saveRDS(res, file = "CN-aware-DGE/results/rna_edge.RDS")
 
+#lib.size <- edger.obj[["samples"]][["lib.size"]]
+#norm.factors <- edger.obj[["samples"]][["norm.factors"]]
+#lib.size <- lib.size*norm.factors
+#lib.size <- log(lib.size)
+
 # Fit the CN-aware NB GLMs #
 data_obj <- edgeR::DGEList(rna_cnv, group = metadata$condition)
 data_obj <- edgeR::calcNormFactors(data_obj)
 offset <- outer( rep(1,nrow(data_obj)), getOffset(data_obj)) + log(cnv)
 #data_obj <- edgeR::estimateDisp(data_obj, design)
-fit_adj <- edgeR::glmFit(y=rna_cnv, design=design, offset=offset,dispersion = 0.05)
+fit_adj <- edgeR::glmFit(y=rna_cnv, design=design, offset=offset,dispersion = edger.obj[["trended.dispersion"]])
 #test <- edgeR::glmTreat(fit, coef=2)
 lrt_adj <- edgeR::glmLRT(fit_adj, coef=2)
 res_adj <- topTags(lrt_adj, n=1000)$table
@@ -77,6 +85,91 @@ res_adj <- res_adj[rownames_idx,]
 
 #saveRDS(res_adj, file = "CN-aware-DGE/results/rna_edge_adj.RDS")
 
+### Test real data ###
+load("TCGA/lung_cancer/LUAD/data/clinical_luad.Rdata")
+load("TCGA/lung_cancer/LUAD/data/luad_cnv_tumor.Rdata")
+load("TCGA/lung_cancer/LUAD/data/luad_rna_tumor.Rdata")
+load("TCGA/lung_cancer/LUAD/data/luad_rna_normal.Rdata")
+
+clinical_luad <- clinical_luad %>% 
+  dplyr::rename(patID=bcr_patient_barcode, stage=stage_event_pathologic_stage) %>% 
+  dplyr::select(patID,stage)
+
+clinical_luad <- clinical_luad[ clinical_luad$stage %in% c("Stage IIIA", "Stage IIB"),]
+luad_cnv_tumor <- luad_cnv_tumor[ ,colnames(luad_cnv_tumor) %in% clinical_luad$patID]
+
+colnames(luad_rna_norm) <- substr(colnames(luad_rna_tum), 1, 12)
+colnames(luad_rna_tum) <- substr(colnames(luad_rna_tum), 1, 12)
+
+luad_rna_norm <- luad_rna_norm[ ,colnames(luad_rna_norm) %in% colnames(luad_cnv_tumor)]
+luad_rna_tum <- luad_rna_tum[ ,colnames(luad_rna_tum) %in% colnames(luad_cnv_tumor)]
+
+x <- colnames(luad_rna_norm)
+names(luad_rna_norm) <- paste(x,"-11A")
+
+x <- colnames(luad_rna_tum)
+names(luad_rna_tum) <- paste(x,"-01A")
+
+luad_rna <- cbind(luad_rna_norm, luad_rna_tum)
+
+luad_rna <- luad_rna[which(rowSums(luad_rna)>1000),]
+
+luad_cnv_tumor <- luad_cnv_tumor[ rownames(luad_cnv_tumor) %in% rownames(luad_rna),]
+
+rownames_idx <- match(rownames(luad_rna), rownames(luad_cnv_tumor))
+luad_cnv_tumor <- luad_cnv_tumor[rownames_idx,]
+
+luad_cnv_normal <- matrix(2, nrow(luad_cnv_tumor), 14) %>% as.data.frame()
+colnames(luad_cnv_normal) <- colnames(luad_cnv_tumor)
+rownames(luad_cnv_normal) <- rownames(luad_cnv_tumor)
+
+x <- colnames(luad_cnv_normal)
+names(luad_cnv_normal) <- paste(x,"-11A")
+
+x <- colnames(luad_cnv_tumor)
+names(luad_cnv_tumor) <- paste(x,"-01A")
+
+luad_cnv <- cbind(luad_cnv_normal, luad_cnv_tumor)
+
+luad_cnv <- apply(luad_cnv, 2, function(x) ifelse(x > 10, 10, x)) 
+luad_cnv <- luad_cnv/2
+
+luad_rna <- apply(luad_rna, 2, function(x) ifelse(x == 0, 1, x)) 
+
+hist(rowMeans(luad_cnv_tumor),
+     main = "LUAD", 
+     xlab = "CN state",
+     ylab = "Proportion",
+     col = "#E1DEFC",
+     prob = TRUE,
+     breaks = 10)
+
+metadata <- data.frame(patID = colnames(luad_rna),
+                       condition = rep(c("0", "1"), each = 14))
+metadata <- metadata %>% remove_rownames %>% column_to_rownames(var = "patID") 
+
+# DE test #
+
+design <- model.matrix(~1+condition, data=metadata)
+edger.obj <- edgeR::DGEList(luad_rna)
+edger.obj <- edgeR::calcNormFactors(edger.obj, method="TMM")
+edger.obj <- edgeR::estimateDisp(edger.obj, design)
+fit <- edgeR::glmFit(edger.obj, design)
+lrt <- edgeR::glmLRT(fit, coef=2)
+res <- topTags(lrt, n=16356)$table
+
+# Fit the CN-aware NB GLMs #
+design <- model.matrix(~1+condition, data=metadata)
+data_obj <- edgeR::DGEList(luad_rna)
+data_obj <- edgeR::calcNormFactors(data_obj, method="upperquartile")
+offset <- outer( rep(1,nrow(data_obj)), getOffset(data_obj)) + log(luad_cnv)
+mode(offset) <- "numeric"
+fit_adj <- edgeR::glmFit(y = luad_rna, design = design, offset = offset, dispersion = 0.3426164)
+lrt_adj <- edgeR::glmLRT(fit_adj, coef=2)
+res_adj <- edgeR::topTags(lrt_adj, n=16356)$table
+
+rownames_idx <- match(rownames(res), rownames(res_adj))
+res_adj <- res_adj[rownames_idx,]
 
 
 # Plot results #

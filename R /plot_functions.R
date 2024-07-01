@@ -178,8 +178,8 @@ library(tidyverse)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
 res$diffexpressed <- "NO"
-res$diffexpressed[res$logFC >= 1.0 & res$FDR < 0.05] <- "UP"
-res$diffexpressed[res$logFC <= -1.0 & res$FDR < 0.05] <- "DOWN"
+res$diffexpressed[res$logFC > 0.5 & res$FDR < 0.05] <- "UP"
+res$diffexpressed[res$logFC < 0.5 & res$FDR < 0.05] <- "DOWN"
 
 res_adj$diffexpressed <- "NO"
 res_adj$diffexpressed[res_adj$logFC >= 1.0 & res_adj$FDR < 0.05] <- "UP"
@@ -189,7 +189,7 @@ res_adj$diffexpressed[res_adj$logFC <= -1.0 & res_adj$FDR < 0.05] <- "DOWN"
 
 #Make simple graphics
 p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
+  geom_vline(xintercept = c(-0.5, 0.5), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "gray", "red"))+

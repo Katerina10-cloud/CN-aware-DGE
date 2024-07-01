@@ -12,9 +12,7 @@ The focus is to combine RNA-seq and Copy Number cancer data in the DE analysis c
 
 $`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$ 
 
-$`\mu_{ij} = O_{ij} q_{ij}`$  
-
-$`O_{ij} = s_j + log\displaystyle (\frac{CN_{ij}}{2}) `$ 
+$`\mu_{ij} = s_{j} (\frac{CN_{ij}}{2}) q_{ij}`$  
 
 $`\log(q_{ij}) = \beta_{i0} X_{j0} + \beta_{i1} X_{j1}`$ 
 
@@ -28,7 +26,6 @@ $`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector (base le
 
 $`s_j =`$ library size factor
 
-$`O_{ij} =`$ offset
 
 
 
