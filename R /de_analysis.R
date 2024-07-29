@@ -114,11 +114,11 @@ lihc_cnv <- lihc_cnv %>% as.data.frame() %>%
 cnv <- lihc_cnv %>% 
   mutate(cnv = case_when(
     cnv_mean <= 0.5 ~ "0",
-    cnv_mean > 0.5 & cnv_mean <= 1.6 ~ "1",
-    cnv_mean > 1.6 & cnv_mean <= 2.4 ~ "2",
+    cnv_mean > 0.5 & cnv_mean <= 1.8 ~ "1",
+    cnv_mean > 1.8 & cnv_mean <= 2.4 ~ "2",
     cnv_mean > 2.4 & cnv_mean <= 3.5 ~ "3",
-    cnv_mean > 3.5 & cnv_mean <= 4.5 ~ "4",
-    cnv_mean > 4.5 ~ "5")) %>% 
+    cnv_mean > 3.5 & cnv_mean <= 4.4 ~ "4",
+    cnv_mean > 4.4 ~ "5")) %>% 
   select(cnv)
 
 cnv <- cnv %>% 

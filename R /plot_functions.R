@@ -3,10 +3,8 @@
 ###--------------------------------------------------------###
 #install.packages("colorspace")
 
-library(ggplot2)
-library(colorspace)
-library(ggpubr)
-library(tidyverse)
+pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr")
+sapply(pkgs, require, character.only = TRUE)
 
 #hcl_palettes(plot = TRUE)
 
@@ -26,19 +24,18 @@ plot <- ggplot(data=df, aes(x=gene_groups, y=frequency, fill=dge_groups)) +
   theme_minimal()
 
 
-#preparing data for boxplot
+### Preparing data for boxplot ###
 rna_zscore_tumor <- rna_zscore_tumor %>% mutate(sample_type = "Tumor")
 rna_zscore_normal <- rna_zscore_normal %>% mutate(sample_type = "Normal")
 
-plot_data1_lihc <- cbind(rna_zscore_normal, cnv)  
-plot_data1_lihc$cnv <- as.factor(plot_data1_lihc$cnv)
-plot_data2_lihc <- cbind(rna_zscore_tumor, cnv) 
-plot_data2_lihc$cnv <- as.factor(plot_data2_lihc$cnv)
-plot_data_lihc <- rbind(plot_data1_lihc, plot_data2_lihc)
-plot_data2_lihc <- plot_data2_lihc %>% mutate(cancer_type = "LIHC")
+plot_data1_luad <- cbind(rna_zscore_normal, cnv)  
+plot_data1_luad$cnv <- as.factor(plot_data1_luad$cnv)
+plot_data2_luad <- cbind(rna_zscore_tumor, cnv) 
+plot_data2_luad$cnv <- as.factor(plot_data2_luad$cnv)
+plot_data_luad <- rbind(plot_data1_luad, plot_data2_luad)
+plot_data2_luad <- plot_data2_luad %>% mutate(cancer_type = "LUAD")
 
-plot_data_all <- rbind(plot_data_luad, plot_data_brca, plot_data_lihc)
-plot_data_tumor <- rbind(plot_data2_luad, plot_data2_brca, plot_data2_lihc)
+
 
 ### Boxplot ###
 
@@ -76,11 +73,11 @@ bxp1 <- bxp1 + scale_fill_manual(values=div)+
 bxp1
 
 #Comparison boxplot Tumor vs Normal
-bxp2 <- ggplot(plot_data_all, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
+bxp2 <- ggplot(plot_data_luad, aes(x = cnv, y = rna_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
-  labs(x="CN group", y = "mRNA Z-score")+
-  theme_bw()+
-  facet_wrap(~cancer_type)
+  labs(x="CN group", y = "mRNA Z-score", title = "LUAD")+
+  theme_bw()
+  #facet_wrap(~cancer_type)
 bxp2 <- bxp2 + scale_fill_manual(values=c("#999999", "#E69F00"))+
   font("xy.text", size = 12, color = "black", face = "bold")+
   font("title", size = 12, color = "black", face = "bold.italic")+
@@ -193,7 +190,7 @@ p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("blue", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-10, 10, 2))+
+  scale_x_continuous(breaks = seq(-2, 2, 1))+
   labs(title="EdgeR: simulated RNA counts",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
@@ -207,7 +204,7 @@ p2 <- ggplot(data = res_adj, aes(x = logFC, y = -log10(FDR), col = diffexpressed
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "gray", "red"))+
+  scale_color_manual(values = c("gray", "blue", "red"))+
   scale_x_continuous(breaks = seq(-10, 10, 2))+
   labs(title="EdgeR adj for CN signal",x="effect size (log2)")+
   theme_bw()+
@@ -285,7 +282,7 @@ p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed
 p6
 
 #Plots
-gridExtra::grid.arrange(p1, p2, p3, p4, p5, nrow = 2)
+gridExtra::grid.arrange(p1, p2, nrow = 1)
 #grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
 
 

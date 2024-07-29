@@ -28,7 +28,7 @@
     "    \"\"\"Abstract class with DESeq2-related inference methods.\"\"\"\n",
     "    \n",
     "    @abstractmethod\n",
-    "    def irls_glm(\n",
+    "    def irls(\n",
     "        self,\n",
     "        counts: np.ndarray,\n",
     "        size_factors: np.ndarray,\n",
