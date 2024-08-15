@@ -27,22 +27,9 @@ $`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector (base le
 $`s_j =`$ library size factor
 
 
-
-
-
 *Statistical testing (Wald test)*:
 
 $`H_0 : \beta_{1i} = 0`$  vs  $`H_1: \beta_{1i} \neq 0`$
-
-
-
-## DE simulation
-
-##### CN saturation (sigmoid curve)
-
-$`\sigma(CN_{ij}) | \log(\frac{CN_{ij}}{2}) = \tau`$
-
-$`\sigma(CN_{ij}) = \frac{2\exp^\tau}{1+\exp^\tau}`$
 
 
 
