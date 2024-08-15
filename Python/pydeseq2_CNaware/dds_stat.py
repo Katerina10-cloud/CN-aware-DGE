@@ -15,6 +15,7 @@ from def_inference import DefInference
 from inference import Inference
 from pydeseq2.utils import lowess
 from pydeseq2.utils import wald_test
+from pydeseq2.utils import make_MA_plot
 from grid_search import grid_fit_shrink_beta
 #from pydeseq2.utils import n_or_more_replicates
 
@@ -653,3 +654,41 @@ class pydeseq2CN_Stats:
             new_ref_idx = self.LFC.columns.get_loc(f"{factor}_{ref}_vs_{old_ref}")
             self.contrast_vector[new_alternative_idx] = 1
             self.contrast_vector[new_ref_idx] = -1
+
+    
+    def plot_MA(self, log: bool = True, save_path: Optional[str] = None, **kwargs):
+        """
+        Create an log ratio (M)-average (A) plot using matplotlib.
+
+        Useful for looking at log fold-change versus mean expression
+        between two groups/samples/etc.
+        Uses matplotlib to emulate the ``make_MA()`` function in DESeq2 in R.
+
+        Parameters
+        ----------
+        log : bool
+            Whether or not to log scale x and y axes (``default=True``).
+
+        save_path : str or None
+            The path where to save the plot. If left None, the plot won't be saved
+            (``default=None``).
+
+        **kwargs
+            Matplotlib keyword arguments for the scatter plot.
+        """
+        # Raise an error if results_df are missing
+        if not hasattr(self, "results_df"):
+            raise AttributeError(
+                "Trying to make an MA plot but p-values were not computed yet. "
+                "Please run the summary() method first."
+            )
+
+        make_MA_plot(
+            self.results_df,
+            padj_thresh=self.alpha,
+            log=log,
+            save_path=save_path,
+            lfc_null=self.lfc_null,
+            alt_hypothesis=self.alt_hypothesis,
+            **kwargs,
+        )
