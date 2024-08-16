@@ -92,6 +92,7 @@ ggarrange(
 
 gridExtra::grid.arrange(bxp1, bxp2, nrow = 2)
 
+
 ###-------------------------------------------------------------------###
 ### Violin plot ###
 ###-------------------------------------------------------------------###
@@ -168,8 +169,12 @@ barplot
 ### Volcano Plot ###
 ###-------------------------------------------------------------------###
 
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CN-aware-DGE/Python/resuls/")
+
 library(gridExtra)
 library(tidyverse)
+
+res <- read.csv("res_CNnaive.csv")
 
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
