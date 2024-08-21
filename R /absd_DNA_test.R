@@ -15,8 +15,8 @@ deseq_sim <- DESeq2::makeExampleDESeqDataSet(
   m = 20,
   betaSD = 0.2,
   interceptMean = 8,
-  interceptSD = 2,
-  dispMeanRel = function(x) 8/x + 0.2,
+  interceptSD = 4,
+  dispMeanRel = function(x) 8/x + 0.3,
   sizeFactors = sizeFactors
 )
 rna_counts <- data.frame(deseq_sim@assays@data@listData[["counts"]])
@@ -48,6 +48,8 @@ rownames(rna_counts) <- paste0("G", 1:(nrow(rna_counts)))
 # Simulate DGE induced by CN #
 rna_cnv <- rna_counts * cnv
 rna_cnv <- ceiling(rna_cnv)
+
+write.csv(rna_cnv, file = "rna_counts_cnv_v2.csv", row.names = T)
 
 #lib.size <- colSums(rna_cnv, na.rm=T)
 

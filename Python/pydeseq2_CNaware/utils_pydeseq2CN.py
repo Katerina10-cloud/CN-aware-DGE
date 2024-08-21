@@ -20,12 +20,14 @@ from scipy.special import polygamma  # type: ignore
 from scipy.stats import norm  # type: ignore
 from sklearn.linear_model import LinearRegression  # type: ignore
 
+from grid_search import grid_fit_beta
+
 #import pydeseq2
 from pydeseq2.utils import fit_alpha_mle
 from pydeseq2.utils import get_num_processes
-
 from pydeseq2.grid_search import grid_fit_alpha
 from pydeseq2.grid_search import grid_fit_shrink_beta
+
 
 def irls_glm(
     counts: np.ndarray,
@@ -43,13 +45,13 @@ def irls_glm(
 
     assert optimizer in ["BFGS", "L-BFGS-B"]
     
-    X = design_matrix
     num_vars = design_matrix.shape[1]
+    X = design_matrix
     
     # if full rank, estimate initial betas for IRLS below
     if np.linalg.matrix_rank(X) == num_vars:
         Q, R = np.linalg.qr(X)
-        y = np.log((counts/cnv)/size_factors + 0.1)
+        y = np.log((counts / cnv) / size_factors + 0.1)
         beta_init = solve(R, Q.T @ y)
         beta = beta_init
 
@@ -68,7 +70,7 @@ def irls_glm(
     i = 0
     while dev_ratio > beta_tol:
         W = mu / (1.0 + mu * disp)
-        z = np.log((mu / cnv)/size_factors) + (counts - mu) / mu
+        z = np.log((mu / cnv) / size_factors) + (counts - mu) / mu
         H = (X.T * W) @ X + ridge_factor
         beta_hat = solve(H, X.T @ (W * z), assume_a="pos")
         i += 1
@@ -83,7 +85,6 @@ def irls_glm(
 
             def df(beta: np.ndarray) -> np.ndarray:
                 mu_ = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
-                #mu_ = np.maximum(size_factors * np.exp(X @ beta), min_mu)
                 return (
                     -X.T @ counts
                     + ((1 / disp + counts) * mu_ / (1 / disp + mu_)) @ X
@@ -101,20 +102,21 @@ def irls_glm(
                     else None
                 ),
             )
+            
             beta = res.x
             mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
             converged = res.success
 
-            if not res.success and num_vars <= 2:
-                beta = grid_fit_beta(
-                    counts,
-                    size_factors,
-                    cnv,
-                    X,
-                    disp,
-                )
-                mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
-            break
+            #if not res.success and num_vars <= 2:
+                #beta = grid_fit_beta(
+                    #counts,
+                    #size_factors,
+                    #cnv,
+                    #X,
+                    #disp,
+                #)
+                #mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+            #break
 
         beta = beta_hat
         mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
@@ -131,8 +133,9 @@ def irls_glm(
     XtWX = (X.T * W) @ X + ridge_factor
     H = W_sq * np.diag(X @ np.linalg.inv(XtWX) @ X.T) * W_sq
     
-    # Return an UNthresholded mu (as in the R code)
+    # Return an UNthresholded mu 
     # Previous quantities are estimated with a threshold though
+    mu = cnv * size_factors * np.exp(X @ beta)
     
     return beta, mu, H, converged
 
@@ -246,53 +249,6 @@ def fit_moments_dispersions2(
     # ddof=1 is to use an unbiased estimator, as in R
     # NaN (variance = 0) are replaced with 0s
     return np.nan_to_num((sigma - s_mean_inv * mu) / mu**2)
-
-
-
-def grid_fit_beta(
-    counts: np.ndarray,
-    size_factors: np.ndarray,
-    design_matrix: np.ndarray,
-    disp: float,
-    cnv: np.ndarray,
-    min_mu: float = 0.5,
-    grid_length: int = 60,
-    min_beta: float = -30,
-    max_beta: float = 30,
-) -> np.ndarray:
-    
-    x_grid = np.linspace(min_beta, max_beta, grid_length)
-    y_grid = np.linspace(min_beta, max_beta, grid_length)
-    ll_grid = np.zeros((grid_length, grid_length))
-
-    def loss(beta: np.ndarray) -> np.ndarray:
-        # closure to minimize
-
-        mu = np.maximum(cnv[:, None] * size_factors[:, None] * np.exp(design_matrix @ beta.T), min_mu)
-        return vec_nb_nll(counts, mu, disp) + 0.5 * (1e-6 * beta**2).sum(1)
-
-    for i, x in enumerate(x_grid):
-        ll_grid[i, :] = loss(np.array([[x, y] for y in y_grid]))
-
-    min_idxs = np.unravel_index(np.argmin(ll_grid, axis=None), ll_grid.shape)
-    delta = x_grid[1] - x_grid[0]
-
-    fine_x_grid = np.linspace(
-        x_grid[min_idxs[0]] - delta, x_grid[min_idxs[0]] + delta, grid_length
-    )
-
-    fine_y_grid = np.linspace(
-        y_grid[min_idxs[1]] - delta,
-        y_grid[min_idxs[1]] + delta,
-        grid_length,
-    )
-
-    for i, x in enumerate(fine_x_grid):
-        ll_grid[i, :] = loss(np.array([[x, y] for y in fine_y_grid]))
-
-    min_idxs = np.unravel_index(np.argmin(ll_grid, axis=None), ll_grid.shape)
-    beta = np.array([fine_x_grid[min_idxs[0]], fine_y_grid[min_idxs[1]]])
-    return beta
 
 
 def nb_nll(

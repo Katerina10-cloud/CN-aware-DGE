@@ -3,7 +3,7 @@
 ###--------------------------------------------------------###
 #install.packages("colorspace")
 
-pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr")
+pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr", "gridExtra")
 sapply(pkgs, require, character.only = TRUE)
 
 #hcl_palettes(plot = TRUE)
@@ -169,34 +169,40 @@ barplot
 ### Volcano Plot ###
 ###-------------------------------------------------------------------###
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CN-aware-DGE/Python/resuls/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CN-aware-DGE/Python/")
 
-library(gridExtra)
-library(tidyverse)
-
-res <- read.csv("res_CNnaive.csv")
-
+res <- read.csv("results/res_CNnaive_sim.csv")
+res_adj <- read.csv("results/res_CNaware_sim_noshrink.csv")
+res_adj_shrink <- read.csv("results/res_CNaware_sim_shrink.csv")
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
+
 res$diffexpressed <- "NO"
-res$diffexpressed[res$logFC >= 1.0 & res$FDR < 0.05] <- "UP"
-res$diffexpressed[res$logFC <= -1.0 & res$FDR < 0.05] <- "DOWN"
-
-res_adj$diffexpressed <- "NO"
-res_adj$diffexpressed[res_adj$logFC >= 1.0 & res_adj$FDR < 0.05] <- "UP"
-res_adj$diffexpressed[res_adj$logFC <= -1.0 & res_adj$FDR < 0.05] <- "DOWN"
-
+res$diffexpressed[res$log2FoldChange >= 1.0 & res$padj < 0.05] <- "UP"
+res$diffexpressed[res$log2FoldChange <= -1.0 & res$padj < 0.05] <- "DOWN"
+res <- res %>% dplyr::filter(log2FoldChange < 2.0, log2FoldChange > -2.0,)
 #res <- res[-c(11602), ]
 
+res_adj$diffexpressed <- "NO"
+res_adj$diffexpressed[res_adj$log2FoldChange >= 1.0 & res_adj$padj < 0.05] <- "UP"
+res_adj$diffexpressed[res_adj$log2FoldChange <= -1.0 & res_adj$padj < 0.05] <- "DOWN"
+#res_adj <- res_adj %>% dplyr::filter(padj > 5.655241e-76, log2FoldChange > -4.0,)
+
+res_adj_shrink$diffexpressed <- "NO"
+res_adj_shrink$diffexpressed[res_adj_shrink$log2FoldChange >= 1.0 & res_adj_shrink$padj < 0.05] <- "UP"
+res_adj_shrink$diffexpressed[res_adj_shrink$log2FoldChange <= -1.0 & res_adj_shrink$padj < 0.05] <- "DOWN"
+res_adj_shrink <- res_adj_shrink %>% dplyr::filter(log2FoldChange < 2.0, log2FoldChange > -1.5,)
+
+
 #Make simple graphics
-p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
+p1 <- ggplot(data = res, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-2, 2, 1))+
-  labs(title="EdgeR: simulated RNA counts",x="effect size (log2)")+
+  scale_color_manual(values = c("darkblue", "gray", "darkred"))+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="pydeseq2_CNnaive - sim",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -205,13 +211,13 @@ p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p1
 
-p2 <- ggplot(data = res_adj, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
+p2 <- ggplot(data = res_adj, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("gray", "blue", "red"))+
-  scale_x_continuous(breaks = seq(-10, 10, 2))+
-  labs(title="EdgeR adj for CN signal",x="effect size (log2)")+
+  scale_color_manual(values = c("gray", "darkblue", "darkred"))+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="pydeseq2_CNaware - sim (no shrink)",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -220,15 +226,15 @@ p2 <- ggplot(data = res_adj, aes(x = logFC, y = -log10(FDR), col = diffexpressed
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p2
 
-gridExtra::grid.arrange(p1, p2, nrow = 1)
+#gridExtra::grid.arrange(p1, p2, nrow = 1)
 
-p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+p3 <- ggplot(data = res_adj_shrink, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("gray", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 1))+
-  labs(title="DESeqCN: CN signal", x="effect size (log2)")+
+  scale_color_manual(values = c("gray", "darkblue", "darkred"))+
+  scale_x_continuous(breaks = seq(-8, 8, 1))+
+  labs(title="pydeseq2_CNaware - sim (yes shrink)", x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -236,6 +242,8 @@ p3 <- ggplot(data = res3, aes(x = log2FoldChange, y = -log10(padj), col = diffex
   font("ylab", size = 10)+
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p3
+
+gridExtra::grid.arrange(p1, p2, p3, nrow = 1)
 
 p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +

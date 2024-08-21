@@ -171,6 +171,7 @@ class pydeseq2CN_data:
 
         self.continuous_factors = continuous_factors
 
+
         # Build the design matrix
         self.design_matrix = build_design_matrix(
             metadata=self.metadata,
@@ -733,6 +734,7 @@ class pydeseq2CN_data:
         design_matrix = self.obsm["design_matrix"].values
         counts=self.data["counts"].to_numpy()
         cnv=self.data["cnv"].to_numpy()
+        cnv = cnv+10e-9
 
         if not self.quiet:
             print("Fitting LFCs...", file=sys.stderr)
