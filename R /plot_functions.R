@@ -3,14 +3,13 @@
 ###--------------------------------------------------------###
 #install.packages("colorspace")
 
-pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr", "gridExtra")
+pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr", "gridExtra", "ggpointdensity")
 sapply(pkgs, require, character.only = TRUE)
 
 #hcl_palettes(plot = TRUE)
 
 ### Making barplot ###
-#row.names(cnv) <- 1:nrow(cnv) cnv[1:3]
-#cvn$GeneID <- rownames(cvn)
+
 df <- data.frame(dge_groups=rep(c("DEG", "DEG_CNV"), each=3),
                  gene_groups=rep(c("up_gains", "down_loss", "neutral_cnv"),2),
                  frequency=c(4.6, 13.0, 60.6, 13.2, 3.7, 8.4))
@@ -171,23 +170,23 @@ barplot
 
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/CN-aware-DGE/Python/")
 
-res <- read.csv("results/res_CNnaive_sim.csv")
-res_adj <- read.csv("results/res_CNaware_sim_noshrink.csv")
+res <- read.csv("results/res_CNnaive_test4.csv")
+res_adj <- read.csv("results/res_CNaware_test4.csv")
 res_adj_shrink <- read.csv("results/res_CNaware_sim_shrink.csv")
 # Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2fc respectively positive or negative)
 #colnames(res3_nocnv)[3] <- "B1_1"
 #colnames(res4_cnv)[3] <- "B1_2"
 
 res$diffexpressed <- "NO"
-res$diffexpressed[res$log2FoldChange >= 1.0 & res$padj < 0.05] <- "UP"
-res$diffexpressed[res$log2FoldChange <= -1.0 & res$padj < 0.05] <- "DOWN"
+res$diffexpressed[res$logFC >= 1.0 & res$FDR < 0.05] <- "UP"
+res$diffexpressed[res$logFC <= -1.0 & res$FDR < 0.05] <- "DOWN"
 res <- res %>% dplyr::filter(log2FoldChange < 2.0, log2FoldChange > -2.0,)
 #res <- res[-c(11602), ]
 
 res_adj$diffexpressed <- "NO"
-res_adj$diffexpressed[res_adj$log2FoldChange >= 1.0 & res_adj$padj < 0.05] <- "UP"
-res_adj$diffexpressed[res_adj$log2FoldChange <= -1.0 & res_adj$padj < 0.05] <- "DOWN"
-#res_adj <- res_adj %>% dplyr::filter(padj > 5.655241e-76, log2FoldChange > -4.0,)
+res_adj$diffexpressed[res_adj$logFC >= 1.0 & res_adj$FDR < 0.05] <- "UP"
+res_adj$diffexpressed[res_adj$logFC <= -1.0 & res_adj$FDR < 0.05] <- "DOWN"
+res_adj <- res_adj %>% dplyr::filter(FDR > 2.180713e-65, logFC > -4.0,)
 
 res_adj_shrink$diffexpressed <- "NO"
 res_adj_shrink$diffexpressed[res_adj_shrink$log2FoldChange >= 1.0 & res_adj_shrink$padj < 0.05] <- "UP"
@@ -196,13 +195,13 @@ res_adj_shrink <- res_adj_shrink %>% dplyr::filter(log2FoldChange < 2.0, log2Fol
 
 
 #Make simple graphics
-p1 <- ggplot(data = res, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+p1 <- ggplot(data = res, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
   scale_color_manual(values = c("darkblue", "gray", "darkred"))+
   scale_x_continuous(breaks = seq(-8, 8, 1))+
-  labs(title="pydeseq2_CNnaive - sim",x="effect size (log2)")+
+  labs(title="pydeseq2_CNnaive - edgeR",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -211,13 +210,13 @@ p1 <- ggplot(data = res, aes(x = log2FoldChange, y = -log10(padj), col = diffexp
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p1
 
-p2 <- ggplot(data = res_adj, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
+p2 <- ggplot(data = res_adj, aes(x = logFC, y = -log10(FDR), col = diffexpressed)) +
   geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
   geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
   geom_point(size = 1) +
-  scale_color_manual(values = c("gray", "darkblue", "darkred"))+
+  scale_color_manual(values = c("darkblue", "gray", "darkred"))+
   scale_x_continuous(breaks = seq(-8, 8, 1))+
-  labs(title="pydeseq2_CNaware - sim (no shrink)",x="effect size (log2)")+
+  labs(title="pydeseq2_CNaware - edgeR",x="effect size (log2)")+
   theme_bw()+
   theme(legend.position="none")+
   font("xy.text", size = 10, color = "black")+
@@ -226,77 +225,9 @@ p2 <- ggplot(data = res_adj, aes(x = log2FoldChange, y = -log10(padj), col = dif
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p2
 
-#gridExtra::grid.arrange(p1, p2, nrow = 1)
-
-p3 <- ggplot(data = res_adj_shrink, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 1) +
-  scale_color_manual(values = c("gray", "darkblue", "darkred"))+
-  scale_x_continuous(breaks = seq(-8, 8, 1))+
-  labs(title="pydeseq2_CNaware - sim (yes shrink)", x="effect size (log2)")+
-  theme_bw()+
-  theme(legend.position="none")+
-  font("xy.text", size = 10, color = "black")+
-  font("xlab", size = 10)+
-  font("ylab", size = 10)+
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-p3
-
-gridExtra::grid.arrange(p1, p2, p3, nrow = 1)
-
-p4 <- ggplot(data = res4, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 1))+
-  labs(title="DESeq2: mixed signals", x="effect size (log2)")+
-  theme_bw()+
-  theme(legend.position="none")+
-  font("xy.text", size = 10, color = "black")+
-  font("xlab", size = 10)+
-  font("ylab", size = 10)+
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-p4
-
-#res_nocnv <- stat_res_luad %>% select(B1_1, padj_1) %>% rename("padj" = "padj_1")
-#res_cnv <- stat_res_luad %>% select(B1_2, padj_2) %>% rename("padj" = "padj_2")
-  
-p5 <- ggplot(data = res5, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-1.0, 1.0), col = "darkgreen", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "gray", "red"))+
-  scale_x_continuous(breaks = seq(-3, 3, 1))+
-  labs(title="DESeqCN: mixed signals", x="effect size (log2)")+
-  theme_bw()+
-  theme(legend.position="none")+
-  font("xy.text", size = 10, color = "black")+
-  font("xlab", size = 10)+
-  font("ylab", size = 10)
-p5
-
-#delete rows by name
-#res_nocnv <- res_nocnv[!(row.names(res_nocnv) %in% c("PYCR1")),]
-
-p6 <- ggplot(data = res_cnv, aes(x = B1_2, y = -log10(padj), col = diffexpressed)) +
-  geom_vline(xintercept = c(-0.6, 0.6), col = "darkgreen", linetype = 'dashed') +
-  geom_hline(yintercept = -log10(0.05), col = "darkgreen", linetype = 'dashed') +
-  geom_point(size = 1) +
-  scale_color_manual(values = c("blue", "black", "red"))+
-  scale_x_continuous(breaks = seq(-14, 10, 4))+
-  labs(x="effect size (log2)")+
-  theme_bw()+
-  theme(legend.position="none")+
-  font("xy.text", size = 8, color = "black")+
-  font("xlab", size = 8)+
-  font("ylab", size = 8)
-p6
-
-#Plots
 gridExtra::grid.arrange(p1, p2, nrow = 1)
-#grid.arrange(g2, arrangeGrob(g3, g4, ncol=2), nrow = 2)
+
+
 
 
 ###------------------------------------------------------------###
@@ -414,23 +345,26 @@ pval_rna<- ggplot(p_rna, aes(x=adjpval_rna_glm, y=adjpval_rna_devil)) +
   theme_classic()+
   theme(legend.position="none")
 
-lfc_atac_devil <- devil %>% dplyr::select(geneID,lfc_snATAC)
+lfc_atac_devi <- devil %>% dplyr::select(geneID,lfc_snATAC)
 lfc_atac_glm <- glm %>% dplyr::select(geneID,lfc_snATAC)
-lfc_atac <- cbind(lfc_atac_devil, lfc_atac_glm)
-colnames(lfc_atac) <- c("geneID1", "lfc_atac_devil", "geneID2", "lfc_atac_glm" )
 
-p_lfc_atac <- ggplot(lfc_atac, aes(x=lfc_atac_glm, y=lfc_atac_devil)) + 
+res <- res %>% dplyr::select(logFC)
+res_adj <- res_adj %>% dplyr::select(logFC)
+lfc <- cbind(res, res_adj)
+colnames(lfc) <- c("lfc", "lfc_adj")
+
+p_lfc <- ggplot(lfc, aes(x=lfc_adj, y=lfc)) + 
   #geom_point(shape=15, color="blue")+
   geom_pointdensity(shape=20) +
   #scale_color_viridis()+
   geom_smooth(method=lm, se=FALSE, linetype="dashed",
               color="darkred")+
-  labs(title = "log2FC snATAC")+
-  xlab("log2FC snATAC from glmGamPoi") +
-  ylab ("log2FC snATAC from Devil") +
+  labs(title = "Log2FC comparison - edgeR")+
+  xlab("log2FC with CN normalization") +
+  ylab ("log2FC no CN normalization") +
   theme_classic()+
   theme(legend.position="none")
-
+p_lfc
 
 lfc_rna_devil <- devil %>% dplyr::select(geneID,lfc_snRNA)
 lfc_rna_glm <- glm %>% dplyr::select(geneID,lfc_snRNA)

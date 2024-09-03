@@ -1,12 +1,9 @@
 # Exploratory analysis of CNV and RNAseq data (TCGA portal)
 
-library(ggplot2)
-library(tidyverse)
-library(GenomicRanges)
-library(biomaRt)
-library(Homo.sapiens)
-library(org.Hs.eg.db)
-library(AnnotationHub)
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
+pkgs <- c("tidyverse", "ggplot2", "GenomicRanges", "biomaRt", "Homo.sapience", "org.Hs.eg.db", "AnnotationHub")
+sapply(pkgs, require, character.only = TRUE)
+
 
 #Replace by Checking Condition on Character Column
 x <- luad_cnv_seg$chr
@@ -27,12 +24,14 @@ cnv_annotation <- paste(as.character(gr), genes)
 
 #Splitting a large data file in multiple columns
 cnv_annotation <- as.data.frame(cnv_annotation)
-#colnames(cnv_s5_annotation)[3] <- "gene"
 cnv_annotation$cnv_annotation <- gsub(' ', ':', cnv_annotation$cnv_annotation)
 cnv_annotation <- data.frame(do.call("rbind", strsplit(cnv_annotation$cnv_annotation, split = ":", fixed = TRUE)))
 colnames(cnv_annotation) <- c("chr", "range", "gene")
 s12$range <- str_c(s12$start, "-", s12$end) #join multiple strings into a single string
-s12_cnv_anno <- merge(s12, cnv_annotation, by = "range") %>% rename(chr.x = "chr") %>% as_tibble() %>% 
+
+s12_cnv_anno <- merge(s12, cnv_annotation, by = "range") %>% 
+  rename(chr.x = "chr") %>% 
+  as_tibble() %>% 
   dplyr::select(chr,start,end,range,gene,seg_mean,gene,sample)
 
 #Split delimited strings in a column and insert as new rows
