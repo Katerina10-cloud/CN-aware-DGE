@@ -371,11 +371,11 @@ class pydeseq2CN_Stats:
 
         size = 1.0 / self.dds.varm["dispersions"]
         offset = np.log(self.dds.obsm["size_factors"]) 
-        cnv = np.log(self.dds.data["cnv"])
+        #cnv = np.log(self.dds.data["cnv"])
 
         counts=self.dds.data["counts"].to_numpy()
         cnv=self.dds.data["cnv"].to_numpy()
-       
+        cnv = np.log(cnv)      
 
         # Set priors
         prior_no_shrink_scale = 15

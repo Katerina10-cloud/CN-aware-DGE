@@ -424,7 +424,6 @@ def nbinomGLM(
             beta * no_shrink_mask / prior_no_shrink_scale**2
             + 2 * beta * shrink_mask / (prior_scale**2 + beta[shrink_index] ** 2),
         )
-        
         d_nll = (
             counts - (counts + size) / (1 + size * np.exp(-xbeta - offset - cnv))
         ) @ design_matrix
