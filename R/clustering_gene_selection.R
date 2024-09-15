@@ -6,10 +6,10 @@ pkgs <- c("dplyr", "ggplot2", "cluster", "factoextra", "heatmaply", "DESeq2", "t
 sapply(pkgs, require, character.only = TRUE)
 
 source("CN-aware-DGE/R/utils.R")
-set.seed(12345)
+#set.seed(12345)
 
 # Input data
-data_path <- "TCGA/lung_cancer/LUAD/cnv_tumor.RDS"
+data_path <- "TCGA/lung/LUAD/cnv_tumor.RDS"
 dataset_name <- "LUAD_cnv"
 
 # Clustering patients 
@@ -28,6 +28,7 @@ cnv_filt <- subset(cnv_filt, select=-c(Cluster))
 cnv_filt <- as.matrix(t(cnv_filt))
 cnv_filt <- apply(cnv_filt, 2, function(x) ifelse(x > 10, 10, x))
 
+saveRDS(cnv_filt, file = "TCGA/lung/cnv_filt.RDS")
 
 hist(rowMeans(cnv_filt),
      main = "LUAD", 
@@ -35,7 +36,7 @@ hist(rowMeans(cnv_filt),
      ylab = "Proportion",
      col = "#E1DEFC",
      prob = TRUE,
-     breaks = 10)
+     breaks = 15)
 
 cnv_mean <- cnv_filt %>% 
   as.data.frame() %>% 
@@ -47,7 +48,7 @@ cnv_mean$geneID <- rownames(cnv_mean)
 
 ## RNA data processing ##
 
-data_path <- "TCGA/lung_cancer/LUAD/rna_counts.RDS"
+data_path <- "TCGA/lung/LUAD/rna_counts.RDS"
 dataset_name <- "LUAD_rna"
 
 rna <- rna_processing(dataset_name, data_path, cnv_filt)

@@ -37,8 +37,8 @@ rna_processing <- function(dataset_name, data_path, cnv_filt) {
   if (dataset_name == "LUAD_rna") {
     rna <- readRDS(data_path)
     colnames(rna) <- gsub(pattern = "\\.", replacement = "-", colnames(rna))
-    rna_tum <- rna %>% select(46:90)
-    rna_norm <- rna %>% select(1:45)
+    rna_norm <- rna %>% dplyr::select(1:45)
+    rna_tum <- rna %>% dplyr::select(46:90)
     colnames(rna_norm) <- stringr::str_sub(colnames(rna_norm),1,12)
     colnames(rna_tum) <- stringr::str_sub(colnames(rna_tum),1,12)
     cnv_filt <- as.data.frame(cnv_filt)

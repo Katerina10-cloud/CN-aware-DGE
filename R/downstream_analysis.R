@@ -5,9 +5,9 @@ sapply(pkgs, require, character.only = TRUE)
 
 ### Scatter plot (RNA LFC and CN relationship) ###
 
-res_naive <- read.csv("CN-aware-DGE/Python/results/res_CNnaive_test3.csv")
-res_adj <- read.csv("CN-aware-DGE/Python/results/res_CNaware_test3.csv")
-cnv_filt <- readRDS("TCGA/lung_cancer/LUAD/cnv_filt.RDS")
+res_naive <- read.csv("CN-aware-DGE/Python/results/res_CNnaive_test1.csv")
+res_adj <- read.csv("CN-aware-DGE/Python/results/res_CNaware_test1.csv")
+cnv_filt <- read.csv("TCGA/lung/LUAD/cnv_test_1.csv")
 
 res_naive <- res_naive %>% dplyr::select(X,log2FoldChange, padj) %>% 
   remove_rownames %>% 
@@ -17,16 +17,20 @@ res_adj <- res_adj %>% dplyr::select(X,log2FoldChange, padj) %>%
   remove_rownames %>% 
   column_to_rownames(var="X")
 
-#res_naive <- res_naive_edge %>% dplyr::select(logFC, FDR)
-#res_adj <- res_adj_edge %>% dplyr::select(logFC, FDR)
+cnv_filt <- cnv_filt %>% 
+  as.data.frame() %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="X") 
 
 cnv_mean <- cnv_filt %>% 
-  as.data.frame() %>% 
   dplyr::mutate(cnv_mean = rowMeans(cnv_filt)) %>% 
   dplyr::select(cnv_mean)
 
 common_genes <- intersect(rownames(cnv_mean), rownames(res_naive))
 cnv_mean <- cnv_mean[common_genes, ] %>% data.frame()
+
+res_naive <- res_naive_edge %>% dplyr::select(logFC, FDR)
+res_adj <- res_adj_edge %>% dplyr::select(logFC, FDR)
 
 p_naive <- merge(cnv_mean, res_naive, by = "row.names")
 p_adj <- merge(cnv_mean, res_adj, by = "row.names")
@@ -37,32 +41,33 @@ colnames(p_adj) <- colnames(p_naive)
 #p_naive <- plot_data %>% dplyr::filter(logFC > -2.5,)
 #p_adj <- p_adj %>% dplyr::filter(logFC > -4.0,)
 
-d_scatter_pydeseq <- rbind(p_naive %>% dplyr::mutate(method = "no CN normalization"), 
-                   p_adj %>% dplyr::mutate(method = "with CN normalization"))
+d_scatter_pydeseq <- rbind(p_naive %>% dplyr::mutate(method = "CN naive"), 
+                   p_adj %>% dplyr::mutate(method = "CN aware"))
 d_scatter_pydeseq <- d_scatter_pydeseq %>% 
   dplyr::mutate(tool = "PyDESeq2")
+d_scatter_pydeseq <- d_scatter_pydeseq %>% dplyr::filter(padj > 0.000000e+00,)
 
-d_scatter_edge <- rbind(p_naive %>% dplyr::mutate(method = "no CN normalization"), 
-                           p_adj %>% dplyr::mutate(method = "with CN normalization"))
+
+
+d_scatter_edge <- rbind(p_naive %>% dplyr::mutate(method = "CN naive"), 
+                           p_adj %>% dplyr::mutate(method = "CN aware"))
 d_scatter_edge <- d_scatter_edge %>% 
   dplyr::mutate(tool = "edgeR")
 
-d_scatter_pydeseq <- d_scatter_pydeseq %>% dplyr::filter(padj > 0.000000e+00,)
-
 d_scatter <- rbind(d_scatter_edge, d_scatter_pydeseq)
 
-d_scatter <- d_scatter %>% dplyr::filter(logFC > -4.0,)
+d_scatter <- d_scatter %>% dplyr::filter(logFC < 6.0,)
 
 
-scatter = ggplot(d_scatter_pydeseq, aes(x = log2(cnv_mean), y = logFC)) +
+scatter = ggplot(d_scatter, aes(x = log2(cnv_mean), y = logFC)) +
   geom_point(size=0.8) +
   #geom_smooth(method = "lm", color = "blue", se = T)+
   geom_smooth()+
   #theme(legend.position = 'bottom') +
   labs(x ="log2(CN ratio)", y="log2FC") +
   theme(plot.title=element_text(hjust=0.7, vjust=0.7))+
-  facet_wrap(~method)+
-  #ggh4x::facet_nested(tool~method)+
+  #facet_wrap(~factor(method, levels = c("CN naive", "CN aware")), nrow=1, scale = "free_y")+
+  ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
   guides(color = guide_legend(override.aes = list(size=2)))+
   theme_bw()
 scatter
@@ -148,7 +153,8 @@ res_adj_pydeseq <- res_adj_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(tool = "PyDESeq2") %>% 
-  dplyr::mutate(method = "with CN normalization") %>% 
+  dplyr::mutate(method = "CN aware") %>%
+  #dplyr::mutate(n_genes = "1000 genes") %>% 
   dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tool) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
@@ -156,32 +162,40 @@ res_adj_pydeseq <- res_adj_pydeseq %>%
 res_naive_pydeseq <- res_naive_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
-  dplyr::mutate(method = "no CN normalization") %>% 
-  dplyr::mutate(tool = "PyDESeq2") %>% 
+  dplyr::mutate(method = "CN naive") %>% 
+  dplyr::mutate(tool = "PyDESeq2") %>%
+  #dplyr::mutate(n_genes = "1000 genes") %>% 
   dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tool) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
 
 res_adj_pydeseq <- res_adj_pydeseq %>% dplyr::filter(padj > 0.000000e+00,)
+res_naive_pydeseq <- res_naive_pydeseq %>% dplyr::filter(padj > 2.041247e-79,)
+
+
+#res1_naive_pydeseq <- res1_naive_pydeseq[-c(115),]
+#res2_naive_pydeseq <- res2_naive_pydeseq %>% dplyr::filter(log2FoldChange < 1.5,)
+#res2_adj_pydeseq <- res2_adj_pydeseq %>% dplyr::filter(log2FoldChange < 1.0 ,)
 
 d_volcano_pydeseq <- rbind(res_naive_pydeseq, res_adj_pydeseq)
+
 colnames(d_volcano_pydeseq) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
 
 res_adj_edge <- res_adj_edge %>%
   dplyr::mutate(isDE = (abs(logFC) >= lfc_cut) & (FDR <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(logFC > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(tool = "edgeR") %>% 
-  dplyr::mutate(method = "with CN normalization") %>% 
+  dplyr::mutate(method = "CN aware") %>% 
   dplyr::select(logFC, FDR, isDE, DEtype, method, tool) 
 
 res_naive_edge <- res_naive_edge %>%
   dplyr::mutate(isDE = (abs(logFC) >= lfc_cut) & (FDR <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(logFC > 0, "Up-reg", "Down-reg"))) %>%
-  dplyr::mutate(method = "no CN normalization") %>% 
+  dplyr::mutate(method = "CN naive") %>% 
   dplyr::mutate(tool = "edgeR") %>% 
   dplyr::select(logFC, FDR, isDE, DEtype, method, tool) 
 
-res_adj_edge <- res_adj_edge %>% dplyr::filter(FDR > 5.016736e-65,)
+res_naive_edge <- res_naive_edge[-c(1),]
 
 d_volcano_edge <- rbind(res_naive_edge, res_adj_edge)
 colnames(d_volcano_edge) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
@@ -192,21 +206,18 @@ d_volcano_pydeseq <- d_volcano_pydeseq[common_genes, ]
 d_volcano_edge <- d_volcano_edge[common_genes, ]
 d_volcano <- rbind(d_volcano_pydeseq, d_volcano_edge)
 
-p_volcanos <-  d_volcano %>% 
+p_volcanos <-  d_volcano_pydeseq %>% 
   ggplot(mapping = aes(x=logFC, y=-log10(padj), col=DEtype)) +
   geom_point(size=.8) +
   theme_bw() +
   scale_color_manual(values = de_gene_colors) +
-  ggh4x::facet_nested(tool~method, scale="free") +
-  #facet_wrap(~method, nrow=1, scale = "free")+
+  #ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free_y", independent = "y")+
+  facet_wrap(~factor(method, levels = c("CN naive", "CN aware")), nrow=1, scale = "free")+
   ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
   ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
   ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   ggplot2::theme(legend.position = 'bottom')
 p_volcanos
-
-p_volcanos_sim1 <- p_volcanos
-p_volcanos_sim1
 
 
 # ROC curve #
@@ -316,12 +327,21 @@ ggplot(data = wide_alluvial_data,
   theme(legend.position = "bottom") 
 
 
-  
+#library(networkD3)
 
+#nodes <- data.frame(name = c("Down-reg", "n.d.", "Up-reg",
+                             #"Down-reg", "n.d.", "Up-reg"))
 
+#links <- data.frame(source = c(0, 0, 1, 1, 2, 2),  
+                    #target = c(3, 3, 3, 4, 4, 5),  
+                    #value  = c(91, 2843, 246, 670, 2456, 54))
 
-
-  
+#sankey <- sankeyNetwork(Links = links, Nodes = nodes,
+                        #Source = "source", Target = "target", Value = "value",
+                        #NodeID = "name", units = "Count",
+                        #fontSize = 15, nodeWidth = 30, 
+                        #sinksRight = TRUE)
+#sankey
   
   
   

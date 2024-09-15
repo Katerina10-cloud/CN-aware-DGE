@@ -3,8 +3,8 @@ pkgs <- c("tidyverse", "DESeq2", "ggplot2", "gridExtra", "ggpubr", "ggrepel", "g
 sapply(pkgs, require, character.only = TRUE)
 
 # RNA counts simulation (DESeq2) #
-n_genes = 5000
-n_samples = 50
+n_genes = 1000
+n_samples = 20
 sizeFactors = rep(1, n_samples)
 
 deseq_sim <- DESeq2::makeExampleDESeqDataSet(
@@ -56,6 +56,6 @@ rna_cnv <- rna_counts * cnv
 rna_cnv <- ceiling(rna_cnv)
 rna_cnv <- rna_cnv + 10
 
-write.csv(rna_cnv, file = "CN-aware-DGE/Python/datasets/rna_counts_cnv_v2.csv", row.names = T)
-write.csv(cnv, file = "CN-aware-DGE/Python/datasets/cnv_v2.csv", row.names = T)
-write.csv(metadata, file = "CN-aware-DGE/Python/datasets/metadata_v2.csv", row.names = T)
+write.csv(rna_cnv, file = "CN-aware-DGE/Python/datasets/rna_counts_cnv.csv", row.names = T)
+write.csv(cnv, file = "CN-aware-DGE/Python/datasets/cnv.csv", row.names = T)
+write.csv(metadata, file = "CN-aware-DGE/Python/datasets/metadata.csv", row.names = T)
