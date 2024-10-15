@@ -64,7 +64,8 @@ def irls_glm(
     dev_ratio = 1.0
 
     ridge_factor = np.diag(np.repeat(1e-6, num_vars))
-    mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+    #mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+    mu = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
     
     converged = True
     i = 0
@@ -79,12 +80,14 @@ def irls_glm(
             # If IRLS starts diverging, use L-BFGS-B
             def f(beta: np.ndarray) -> float:
                 # closure to minimize
-                mu_ = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+                #mu_ = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+                mu_ = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
                 
                 return nb_nll(counts, mu_, disp) + 0.5 * (ridge_factor @ beta**2).sum()
 
             def df(beta: np.ndarray) -> np.ndarray:
-                mu_ = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+                #mu_ = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+                mu_ = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
                 return (
                     -X.T @ counts
                     + ((1 / disp + counts) * mu_ / (1 / disp + mu_)) @ X
@@ -104,7 +107,8 @@ def irls_glm(
             )
             
             beta = res.x
-            mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+            #mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+            mu = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
             converged = res.success
 
             #if not res.success and num_vars <= 2:
@@ -119,7 +123,8 @@ def irls_glm(
             #break
 
         beta = beta_hat
-        mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+        #mu = np.maximum(cnv * size_factors * np.exp(X @ beta), min_mu)
+        mu = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
         
         # Compute deviation
         old_dev = dev
@@ -135,7 +140,8 @@ def irls_glm(
     
     # Return an UNthresholded mu 
     # Previous quantities are estimated with a threshold though
-    mu = cnv * size_factors * np.exp(X @ beta)
+    #mu = cnv * size_factors * np.exp(X @ beta)
+    mu = np.maximum(cnv * size_factors * np.exp(np.clip(X @ beta, -30, 30)), min_mu)
     
     return beta, mu, H, converged
 

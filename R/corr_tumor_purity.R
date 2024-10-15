@@ -98,7 +98,10 @@ rownames(results) <- rownames(filt_genes_normalized)
 #results$pval_adj <- p.adjust(results$pval, method = "BH")
 
 ggplot(results, aes(x=p_Spearman)) + 
-  geom_density()
+  geom_density(color="darkblue")+
+  labs(x ="Partial Spearman (ρ)", y="Density")+
+  ggplot2::geom_vline(xintercept = 0.4, linetype = 'dashed', colour="darkred")+
+  theme_bw()
 
 
 

@@ -17,7 +17,7 @@ from pydeseq2.utils import lowess
 from pydeseq2.utils import wald_test
 from pydeseq2.utils import make_MA_plot
 from grid_search import grid_fit_shrink_beta
-#from pydeseq2.utils import n_or_more_replicates
+from pydeseq2.utils import n_or_more_replicates
 
 
 class pydeseq2CN_Stats:
@@ -136,6 +136,7 @@ class pydeseq2CN_Stats:
         dds: pydeseq2CN_data,
         contrast: Optional[List[str]] = None,
         alpha: float = 0.05,
+        cooks_filter: bool = True,
         independent_filter: bool = True,
         prior_LFC_var: Optional[np.ndarray] = None,
         lfc_null: float = 0.0,
@@ -152,6 +153,7 @@ class pydeseq2CN_Stats:
         self.dds = dds
 
         self.alpha = alpha
+        self.cooks_filter = cooks_filter
         self.independent_filter = independent_filter
         self.base_mean = self.dds.varm["_normed_means"].copy()
         self.prior_LFC_var = prior_LFC_var
@@ -226,6 +228,9 @@ class pydeseq2CN_Stats:
             rerun_summary = True
             self.run_wald_test()
 
+        if self.cooks_filter:
+            # Filter p-values based on Cooks outliers
+            self._cooks_filtering()
 
         if not hasattr(self, "padj") or rerun_summary:
             if self.independent_filter:
@@ -310,6 +315,12 @@ class pydeseq2CN_Stats:
         self.statistics: pd.Series = pd.Series(stats, index=self.dds.var_names)
         self.SE: pd.Series = pd.Series(se, index=self.dds.var_names)
 
+         # Account for possible all_zeroes due to outlier refitting in DESeqDataSet
+        if self.dds.refit_cooks and self.dds.varm["replaced"].sum() > 0:
+            self.SE.loc[self.dds.new_all_zeroes_genes] = 0.0
+            self.statistics.loc[self.dds.new_all_zeroes_genes] = 0.0
+            self.p_values.loc[self.dds.new_all_zeroes_genes] = 1.0
+
 
     def lfc_shrink(self, coeff: Optional[str] = None, adapt: bool = True) -> None:
         """LFC shrinkage with an apeGLM prior :cite:p:`DeseqStats-zhu2019heavy`.
@@ -371,10 +382,10 @@ class pydeseq2CN_Stats:
 
         size = 1.0 / self.dds.varm["dispersions"]
         offset = np.log(self.dds.obsm["size_factors"]) 
-        #cnv = np.log(self.dds.data["cnv"])
-
-        counts=self.dds.data["counts"].to_numpy()
+        
+        counts=self.dds.data["counts"]
         cnv=self.dds.data["cnv"].to_numpy()
+        cnv = cnv + 0.1
         cnv = np.log(cnv)      
 
         # Set priors
@@ -513,7 +524,58 @@ class pydeseq2CN_Stats:
             self.p_values.dropna(), method="bh"
         )
 
-    
+    def _cooks_filtering(self) -> None:
+        """Filter p-values based on Cooks outliers."""
+        # Check that p-values are available. If not, compute them.
+        if not hasattr(self, "p_values"):
+            self.run_wald_test()
+
+        num_samples = self.dds.n_obs
+        num_vars = self.design_matrix.shape[-1]
+        cooks_cutoff = f.ppf(0.99, num_vars, num_samples - num_vars)
+
+        # As in DESeq2, only take samples with 3 or more replicates when looking for
+        # max cooks.
+        #use_for_max = n_or_more_replicates(self.design_matrix, 3)
+        use_for_max = n_or_more_replicates(self.dds.obsm["design_matrix"], 3).values
+
+        # If for a gene there are 3 samples or more that have more counts than the
+        # maximum cooks sample, don't count this gene as an outlier.
+
+        # Take into account whether we already replaced outliers
+        
+        if self.dds.refit_cooks and self.dds.varm["refitted"].sum() > 0:
+            cooks_layer = self.dds.layers["replace_cooks"]
+        else:
+            cooks_layer = self.dds.layers["cooks"]
+
+        filtered_cooks_layer = cooks_layer.loc[use_for_max, :]  
+        cooks_outlier = (filtered_cooks_layer > cooks_cutoff).any(axis=0).copy()
+        
+        # Find the position of the maximum cooks distance for each outlier gene
+        
+        if isinstance(self.dds.data["counts"], pd.DataFrame):
+            pos = self.dds.data["counts"].iloc[:, cooks_outlier].values.argmax(axis=0)
+        else:
+            pos = self.dds.data["counts"][:, cooks_outlier].argmax(axis=0)  # Use NumPy indexing
+
+        # Filter out genes where 3 or more samples exceed the maximum cooks distance
+        if isinstance(self.dds.data["counts"], pd.DataFrame):
+            cooks_outlier[cooks_outlier] = (
+                (self.dds.data["counts"].iloc[:, cooks_outlier].values
+                 > self.dds.data["counts"].iloc[pos, cooks_outlier].values)
+                 .sum(axis=0) < 3
+            )
+        else:
+            cooks_outlier[cooks_outlier] = (
+                (self.dds.data["counts"][:, cooks_outlier]
+                > self.dds.data["counts"][pos, cooks_outlier])
+                .sum(axis=0) < 3
+            )
+
+        # Assign NaN to p-values for outlier genes
+        cooks_outlier_index = self.dds.var_names[cooks_outlier]  # Assuming var_names is the gene index
+        self.p_values.loc[cooks_outlier_index] = np.nan
 
     def _fit_prior_var(
         self, coeff_idx: str, min_var: float = 1e-6, max_var: float = 400.0

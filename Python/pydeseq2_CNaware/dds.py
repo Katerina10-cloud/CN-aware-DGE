@@ -30,7 +30,7 @@ from pydeseq2.utils import mean_absolute_deviation
 from pydeseq2.utils import n_or_more_replicates
 from pydeseq2.utils import nb_nll
 from pydeseq2.utils import replace_underscores
-#from pydeseq2.utils import robust_method_of_moments_disp
+from pydeseq2.utils import robust_method_of_moments_disp
 from pydeseq2.utils import test_valid_counts
 from pydeseq2.utils import trimmed_mean
 
@@ -139,6 +139,7 @@ class pydeseq2CN_data:
         min_mu: float = 0.5,
         min_disp: float = 1e-8,
         max_disp: float = 10.0,
+        refit_cooks: bool = True,
         min_replicates: int = 7,
         beta_tol: float = 1e-8,
         n_cpus: Optional[int] = None,
@@ -194,6 +195,7 @@ class pydeseq2CN_data:
         self.n_vars=self.data["counts"].shape[1]
         self.var_names=self.data["counts"].columns
         self.max_disp = np.maximum(max_disp, self.n_obs)
+        self.refit_cooks = refit_cooks
         self.ref_level = ref_level
         self.min_replicates = min_replicates
         self.beta_tol = beta_tol
@@ -392,6 +394,13 @@ class pydeseq2CN_data:
         self.fit_MAP_dispersions()
         # Fit log-fold changes (in natural log scale)
         self.fit_LFC()
+         # Compute Cooks distances to find outliers
+        self.calculate_cooks()
+
+        if self.refit_cooks:
+            # Replace outlier counts, and refit dispersions and LFCs
+            # for genes that had outliers replaced
+            self.refit()
 
     def fit_size_factors(
         self,
@@ -714,8 +723,10 @@ class pydeseq2CN_data:
         self.varm["_outlier_genes"] = np.log(self.varm["genewise_dispersions"]) > np.log(
             self.varm["fitted_dispersions"]
         ) + 2 * np.sqrt(self.uns["_squared_logres"])
-        self.varm["dispersions"][self.varm["_outlier_genes"]] = self.varm["genewise_dispersions"]
-        [self.varm["_outlier_genes"]]
+
+        self.varm["dispersions"][self.varm["_outlier_genes"]] = self.varm["genewise_dispersions"][
+        self.varm["_outlier_genes"]
+        ]
         
    
     
@@ -734,7 +745,7 @@ class pydeseq2CN_data:
         design_matrix = self.obsm["design_matrix"].values
         counts=self.data["counts"].to_numpy()
         cnv=self.data["cnv"].to_numpy()
-        cnv = cnv+10e-9
+        cnv = cnv + 0.1
 
         if not self.quiet:
             print("Fitting LFCs...", file=sys.stderr)
@@ -772,6 +783,89 @@ class pydeseq2CN_data:
 
         self.varm["_LFC_converged"] = np.full(self.n_vars, np.nan)
         self.varm["_LFC_converged"][self.varm["non_zero"]] = converged_
+        
+
+    def calculate_cooks(self) -> None:
+        """Compute Cook's distance for outlier detection.
+
+        Measures the contribution of a single entry to the output of LFC estimation.
+        """
+        # Check that MAP dispersions are available. If not, compute them.
+        if "dispersions" not in self.varm:
+            self.fit_MAP_dispersions()
+
+        if not self.quiet:
+            print("Calculating cook's distance...", file=sys.stderr)
+
+        start = time.time()
+        num_vars = self.obsm["design_matrix"].shape[-1]
+
+        #self.layers["normed_counts"] = self.layers["normed_counts"].to_numpy()
+        non_zero_mask = self.varm["non_zero"].to_numpy()
+        self.layers["normed_counts"] = self.layers["normed_counts"].to_numpy()
+        
+        # Calculate dispersion
+        dispersions = robust_method_of_moments_disp(
+            self.layers["normed_counts"][:, non_zero_mask],
+            self.obsm["design_matrix"],
+        )
+
+        self.data["counts"] = self.data["counts"].to_numpy()
+        
+        # Calculate the squared pearson residuals for non-zero features
+        squared_pearson_res = self.data["counts"][:, non_zero_mask] - self.obsm["_mu_LFC"]
+        squared_pearson_res **= 2
+
+        # Calculate the overdispersion parameter tau
+        V = self.obsm["_mu_LFC"] ** 2
+        V *= dispersions[None, :]
+        V += self.obsm["_mu_LFC"]
+
+        # Calculate r^2 / (tau * num_vars)
+        squared_pearson_res /= V
+        squared_pearson_res /= num_vars
+
+        del V
+
+        # Calculate leverage modifier H / (1 - H)^2
+        diag_mul = 1 - self.obsm["_hat_diagonals"]
+        diag_mul **= 2
+        diag_mul = self.obsm["_hat_diagonals"] / diag_mul
+
+        # Multiply r^2 / (tau * num_vars) by H / (1 - H)^2 to get cook's distance
+        squared_pearson_res *= diag_mul
+
+        del diag_mul
+
+        self.layers["cooks"] = np.full((self.n_obs, self.n_vars), np.nan)
+        self.layers["cooks"][:, non_zero_mask] = squared_pearson_res
+
+        if not self.quiet:
+            print(f"... done in {time.time()-start:.2f} seconds.\n", file=sys.stderr)
+
+    def refit(self) -> None:
+        """Refit Cook outliers.
+
+        Replace values that are filtered out based on the Cooks distance with imputed
+        values, and then re-run the whole DESeq2 pipeline on replaced values.
+        """
+        # Replace outlier counts
+        self._replace_outliers()
+        if not self.quiet:
+            print(
+                f"Replacing {sum(self.varm['replaced']) } outlier genes.\n",
+                file=sys.stderr,
+            )
+
+        if sum(self.varm["replaced"]) > 0:
+            # Refit dispersions and LFCs for genes that had outliers replaced
+            self._refit_without_outliers()
+        else:
+            # Store the fact that no sample was refitted
+            self.varm["refitted"] = np.full(
+                self.n_vars,
+                False,
+            )
         
 
     def _fit_MoM_dispersions(self) -> None:
@@ -909,8 +1003,303 @@ class pydeseq2CN_data:
         self.uns["disp_function_type"] = "mean"
         self.varm["fitted_dispersions"] = np.full(self.n_vars, self.uns["mean_disp"])
 
-   
 
+    def _replace_outliers(self) -> None:
+        """Replace values that are filtered out (based on Cooks) with imputed values."""
+        # Check that cooks distances are available. If not, compute them.
+        if "cooks" not in self.layers:
+            self.calculate_cooks()
+
+        num_samples = self.n_obs
+        num_vars = self.obsm["design_matrix"].shape[1]
+
+        # Check whether cohorts have enough samples to allow refitting
+        self.obsm["replaceable"] = n_or_more_replicates(
+            self.obsm["design_matrix"], self.min_replicates
+        ).values
+
+        if self.obsm["replaceable"].sum() == 0:
+            # No sample can be replaced. Set self.replaced to False and exit.
+            self.varm["replaced"] = np.full(
+                self.n_vars,
+                False,
+            )
+            return
+
+        # Get positions of counts with cooks above threshold
+        cooks_cutoff = f.ppf(0.99, num_vars, num_samples - num_vars)
+        idx = self.layers["cooks"] > cooks_cutoff
+        self.varm["replaced"] = idx.any(axis=0)
+
+        if sum(self.varm["replaced"] > 0):
+            # Compute replacement counts: trimmed means * size_factors
+            #self.counts_to_refit = self[:, self.varm["replaced"]].copy()
+            #self.counts_to_refit = self.data["counts"][:, self.varm["replaced"]].copy()
+
+            self.counts_to_refit = pd.DataFrame(
+                self.data["counts"][:, self.varm["replaced"]], 
+                columns=self.var_names[self.varm["replaced"]]
+            )
+
+            #trim_base_mean = pd.DataFrame(
+                #cast(
+                    #np.ndarray,
+                    #trimmed_mean(
+                        #self.counts_to_refit / self.obsm["size_factors"][:, None],
+                        #trim=0.2,
+                        #axis=0,
+                    #),
+                #),
+                #index=self.counts_to_refit.var_names,
+            #)
+
+            trim_base_mean = pd.DataFrame(
+                cast(
+                    np.ndarray,
+                    trimmed_mean(
+                        self.counts_to_refit / self.obsm["size_factors"][:, None],
+                        trim=0.2,
+                        axis=0,
+                    ),
+                ),
+                index=self.counts_to_refit.columns  # Use .columns instead of .var_names
+            )
+
+            #replacement_counts = (
+                #pd.DataFrame(
+                    #trim_base_mean.values * self.obsm["size_factors"],
+                    #index=self.counts_to_refit.var_names,
+                    #columns=self.counts_to_refit.obs_names,
+                #)
+                #.astype(int)
+                #.T
+            #)
+
+            #self.counts_to_refit.data["counts"][
+                #self.obsm["replaceable"][:, None] & idx[:, self.varm["replaced"]]
+            #] = replacement_counts.values[
+                #self.obsm["replaceable"][:, None] & idx[:, self.varm["replaced"]]
+            #]
+
+            replacement_counts = (
+                pd.DataFrame(
+                    (trim_base_mean.values * self.obsm["size_factors"]).T,  # Ensure this is 2D
+                    index=self.counts_to_refit.index, 
+                    columns=self.counts_to_refit.columns  
+                )
+                .astype(int)
+            )
+
+            replace_mask = self.obsm["replaceable"][:, None] & idx[:, self.varm["replaced"]]
+            
+            print(f"replace_mask before filtering: {replace_mask.shape}")
+            print(f"Number of True values in replace_mask: {np.sum(replace_mask)}")
+
+            # Ensure that replacement_counts and the indexing result are compatible
+            replacement_counts_trimmed = replacement_counts.loc[replace_mask.any(axis=1)] 
+            print(f"replacement_counts_trimmed shape: {replacement_counts_trimmed.shape}")
+
+            # Apply the mask to refit only the matching rows, ensuring consistent dimensions
+            assert replacement_counts_trimmed.shape == self.counts_to_refit.loc[replace_mask.any(axis=1)].shape, \
+                f"Shape mismatch: replacement_counts_trimmed {replacement_counts_trimmed.shape} vs refit slice  {self.counts_to_refit.loc[replace_mask.any(axis=1)].shape}"
+
+            # Replace counts in self.counts_to_refit for the rows matching the mask
+            self.counts_to_refit.loc[replace_mask.any(axis=1)] = replacement_counts_trimmed.values
+
+
+    def _refit_without_outliers(
+        self,
+    ) -> None:
+        """Re-run the whole DESeq2 pipeline with replaced outliers."""
+        assert (
+            self.refit_cooks
+        ), "Trying to refit Cooks outliers but the 'refit_cooks' flag is set to False"
+
+        # Check that _replace_outliers() was previously run.
+        if "replaced" not in self.varm:
+            self._replace_outliers()
+
+        # Only refit genes for which replacing outliers hasn't resulted in all zeroes
+        new_all_zeroes = (self.counts_to_refit == 0).all(axis=0)
+        self.new_all_zeroes_genes = self.counts_to_refit.columns[new_all_zeroes]
+
+        self.varm["refitted"] = self.varm["replaced"].copy()
+        # Only replace if genes are not all zeroes after outlier replacement
+        self.varm["refitted"][self.varm["refitted"]] = ~new_all_zeroes
+
+        # Take into account new all-zero genes
+        if new_all_zeroes.sum() > 0:
+            self.varm["_normed_means"][
+                self.var_names.get_indexer(self.new_all_zeroes_genes)
+            ] = 0
+            self.varm["LFC"].loc[self.new_all_zeroes_genes, :] = 0
+
+        if self.varm["refitted"].sum() == 0:  # if no gene can be refitted, we can skip
+            return
+
+        self.counts_to_refit = self.counts_to_refit.loc[:, ~new_all_zeroes].copy()
+        if isinstance(self.new_all_zeroes_genes, pd.MultiIndex):
+            raise ValueError
+
+        sub_dds = pydeseq2CN_data(
+            counts=pd.DataFrame(
+                self.counts_to_refit,
+                index=self.counts_to_refit.index,
+                columns=self.counts_to_refit.columns,
+            ),
+            cnv=self.data["cnv"],
+            metadata=self.metadata,
+            design_factors=self.design_factors,
+            continuous_factors=self.continuous_factors,
+            ref_level=self.ref_level,
+            min_mu=self.min_mu,
+            min_disp=self.min_disp,
+            max_disp=self.max_disp,
+            refit_cooks=self.refit_cooks,
+            min_replicates=self.min_replicates,
+            beta_tol=self.beta_tol,
+            inference=self.inference,
+        )
+
+        # Use the same size factors
+        sub_dds.obsm["size_factors"] = self.obsm["size_factors"]
+        sub_dds.layers["normed_counts"] = (
+            sub_dds.data["counts"] / sub_dds.obsm["size_factors"][:, None]
+        )
+
+        # Estimate gene-wise dispersions.
+        sub_dds.fit_genewise_dispersions()
+
+        # Compute trend dispersions.
+        # Note: the trend curve is not refitted.
+        sub_dds.uns["disp_function_type"] = self.uns["disp_function_type"]
+        if sub_dds.uns["disp_function_type"] == "parametric":
+            sub_dds.uns["trend_coeffs"] = self.uns["trend_coeffs"]
+        elif sub_dds.uns["disp_function_type"] == "mean":
+            sub_dds.uns["mean_disp"] = self.uns["mean_disp"]
+        sub_dds.varm["_normed_means"] = sub_dds.layers["normed_counts"].mean(0)
+        # Reshape in case there's a single gene to refit
+        sub_dds.varm["fitted_dispersions"] = sub_dds.disp_function(
+            sub_dds.varm["_normed_means"]
+        )
+
+        # Estimate MAP dispersions.
+        # Note: the prior variance is not recomputed.
+        sub_dds.uns["_squared_logres"] = self.uns["_squared_logres"]
+        sub_dds.uns["prior_disp_var"] = self.uns["prior_disp_var"]
+
+        sub_dds.fit_MAP_dispersions()
+
+        # Estimate log-fold changes (in natural log scale)
+        sub_dds.fit_LFC()
+
+        # Replace values in main object
+        self.varm["_normed_means"][self.varm["refitted"]] = sub_dds.varm["_normed_means"]
+        self.varm["LFC"][self.varm["refitted"]] = sub_dds.varm["LFC"]
+        self.varm["genewise_dispersions"][self.varm["refitted"]] = sub_dds.varm[
+            "genewise_dispersions"
+        ]
+        self.varm["fitted_dispersions"][self.varm["refitted"]] = sub_dds.varm[
+            "fitted_dispersions"
+        ]
+        self.varm["dispersions"][self.varm["refitted"]] = sub_dds.varm["dispersions"]
+
+        replace_cooks = pd.DataFrame(self.layers["cooks"].copy())
+        replace_cooks.loc[self.obsm["replaceable"], self.varm["refitted"]] = 0.0
+
+        self.layers["replace_cooks"] = replace_cooks
+        
+
+    def _fit_iterate_size_factors(self, niter: int = 10, quant: float = 0.95) -> None:
+        """
+        Fit size factors using the ``iterative`` method.
+
+        Used when each gene has at least one zero.
+
+        Parameters
+        ----------
+        niter : int
+            Maximum number of iterations to perform (default: ``10``).
+
+        quant : float
+            Quantile value at which negative likelihood is cut in the optimization
+            (default: ``0.95``).
+
+        """
+        # Initialize size factors and normed counts fields
+        self.obsm["size_factors"] = np.ones(self.n_obs)
+        self.layers["normed_counts"] = self.data["counts"]
+
+        # Reduce the design matrix to an intercept and reconstruct at the end
+        self.obsm["design_matrix_buffer"] = self.obsm["design_matrix"].copy()
+        self.obsm["design_matrix"] = pd.DataFrame(
+            1, index=self.obs_names, columns=["intercept"]
+        )
+
+        # Fit size factors using MLE
+        def objective(p):
+            sf = np.exp(p - np.mean(p))
+            nll = nb_nll(
+                counts=self[:, self.non_zero_genes].data["counts"],
+                mu=self[:, self.non_zero_genes].layers["_mu_hat"]
+                / self.obsm["size_factors"][:, None]
+                * sf[:, None],
+                alpha=self[:, self.non_zero_genes].varm["dispersions"],
+            )
+            # Take out the lowest likelihoods (highest neg) from the sum
+            return np.sum(nll[nll < np.quantile(nll, quant)])
+
+        for i in range(niter):
+            # Estimate dispersions based on current size factors
+            self.fit_genewise_dispersions()
+
+            # Use a mean trend curve
+            use_for_mean_genes = self.var_names[
+                (self.varm["genewise_dispersions"] > 10 * self.min_disp)
+                & self.varm["non_zero"]
+            ]
+
+            if len(use_for_mean_genes) == 0:
+                print(
+                    "No genes have a dispersion above 10 * min_disp in "
+                    "_fit_iterate_size_factors."
+                )
+                break
+
+            mean_disp = trim_mean(
+                self[:, use_for_mean_genes].varm["genewise_dispersions"],
+                proportiontocut=0.001,
+            )
+
+            self.varm["fitted_dispersions"] = np.ones(self.n_vars) * mean_disp
+            self.fit_dispersion_prior()
+            self.fit_MAP_dispersions()
+            old_sf = self.obsm["size_factors"].copy()
+
+            # Fit size factors using MLE
+            res = minimize(objective, np.log(old_sf), method="Powell")
+
+            self.obsm["size_factors"] = np.exp(res.x - np.mean(res.x))
+
+            if not res.success:
+                print("A size factor fitting iteration failed.", file=sys.stderr)
+                break
+
+            if (i > 1) and np.sum(
+                (np.log(old_sf) - np.log(self.obsm["size_factors"])) ** 2
+            ) < 1e-4:
+                break
+            elif i == niter - 1:
+                print("Iterative size factor fitting did not converge.", file=sys.stderr)
+
+        # Restore the design matrix and free buffer
+        self.obsm["design_matrix"] = self.obsm["design_matrix_buffer"].copy()
+        del self.obsm["design_matrix_buffer"]
+
+        # Store normalized counts
+        self.layers["normed_counts"] = self.data["counts"] / self.obsm["size_factors"][:, None]
+
+    
     def _check_full_rank_design(self):
         """Check that the design matrix has full column rank."""
         rank = np.linalg.matrix_rank(self.obsm["design_matrix"])
