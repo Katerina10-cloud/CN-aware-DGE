@@ -1,4 +1,4 @@
-# Copy-Number-aware Differential Gene Expression (DGE)
+# Copy-Number-Aware Differential Gene Expression (DGE)
 
 ## Overview
 
