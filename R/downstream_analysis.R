@@ -1,14 +1,14 @@
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
 
 pkgs <- c("tidyverse", "ggplot2", "colorspace", "ggpubr", "gridExtra", "ggpointdensity", "metaseqR2", "ggalluvial",
-          "ggridges")
+          "ggridges", "ggforce", "ggparallel", "alluvial")
 sapply(pkgs, require, character.only = TRUE)
 
 ### Scatter plot (RNA LFC and CN relationship) ###
 
-res_naive <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNnaive_test.csv")
-res_adj <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNaware_test.csv")
-cnv_filt <- read.csv("TCGA/colon/test/cnv_test.csv")
+res_naive <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNnaive_test1.csv")
+res_adj <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNaware_test1.csv")
+cnv_filt <- read.csv("TCGA/lung/LUAD/cnv_test_1.csv")
 
 res_naive <- res_naive %>% dplyr::select(X,log2FoldChange, padj) %>% 
   remove_rownames %>% 
@@ -19,7 +19,23 @@ res_adj <- res_adj %>% dplyr::select(X,log2FoldChange, padj) %>%
   column_to_rownames(var="X")
 
 cnv_filt <- cnv_filt %>% remove_rownames %>% column_to_rownames(var="X")
-cnv_filt <- cnv_filt[13:24] * 2
+cnv_filt <- cnv_filt[21:40] * 2
+
+
+
+hist <- ggplot(cnv_mean, aes(x = cnv_mean)) +
+  geom_histogram(binwidth = 0.4, fill = "#D2AF8199", color = "black") +
+  labs(title = "",
+       x = "CN state",
+       y = "Frequency") +
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(size = 16, color = "black", hjust = 1),  
+    axis.text.y = element_text(size = 16, color = "black"),                      
+    axis.title.x = element_text(size = 16, face = "plain"),                         
+    axis.title.y = element_text(size = 16, face = "plain")                        
+  )
+hist
 
 cnv_mean <- cnv_filt %>% 
   as.data.frame() %>% 
@@ -39,6 +55,9 @@ cnv_mean <- cnv_mean %>%
 res_naive <- res_naive %>% dplyr::select(log2FoldChange, padj)
 res_adj <- res_adj %>% dplyr::select(log2FoldChange, padj)
 
+res_naive_edge <- res_naive_edge %>% dplyr::select(logFC, padj)
+res_aware_edge <- res_aware_edge %>% dplyr::select(logFC, padj)
+
 p_naive <- merge(cnv_mean, res_naive, by = "row.names")
 p_adj <- merge(cnv_mean, res_adj, by = "row.names")
 
@@ -49,7 +68,7 @@ colnames(p_adj) <- colnames(p_naive)
 d_scatter_pydeseq <- rbind(p_naive %>% dplyr::mutate(method = "CN naive"), 
                    p_adj %>% dplyr::mutate(method = "CN aware"))
 
-#d_scatter_pydeseq <- d_scatter_pydeseq %>% dplyr::mutate(tool = "PyDESeq2")
+d_scatter_pydeseq <- d_scatter_pydeseq %>% dplyr::mutate(tool = "PyDESeq2")
 d_scatter_pydeseq <- d_scatter_pydeseq %>% dplyr::filter(abs(logFC) < 5.0 ,)
 
 d_scatter_edge <- rbind(p_naive %>% dplyr::mutate(method = "CN naive"), 
@@ -76,16 +95,18 @@ scatter = ggplot(d_scatter, aes(x = log2(cnv_mean), y = logFC)) +
   geom_smooth()+
   labs(x ="log2(CN ratio)", y="log2FC", colour = "CN group") +
   theme(plot.title=element_text(hjust=0.7, vjust=0.7))+
-  #ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
+  ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
   #facet_wrap(~factor(method, levels = c("CN naive", "CN aware")), nrow=1, scale = "free_y")+
-  ggh4x::facet_nested(factor(method, levels = c("CN naive", "CN aware"))~factor(tumor_type, levels = c("LUAD", "BRCA", "LIHC", "HNSC", "COAD")), scales ="free", independent = "y")+
+  #ggh4x::facet_nested(factor(method, levels = c("CN naive", "CN aware"))~factor(tumor_type, levels = c("LUAD", "BRCA", "LIHC", "HNSC", "COAD")), scales ="free", independent = "y")+
   guides(color = guide_legend(override.aes = list(size=2)))+
   theme_bw()+
   scale_color_manual(values = c(cn_group_colors))+
-  ggplot2::theme(legend.position = 'bottom')
+  ggplot2::theme(legend.position = 'bottom',
+                 legend.text = element_text(size = 12),
+                 strip.text = element_text(size = 12, face = "plain"))
 scatter
 
-#gridExtra::grid.arrange(scatter1, scatter2, nrow = 2)
+ggsave("CN-aware-DGE/plots/main/scatter_luad.png", dpi = 400, width = 5.0, height = 5.0, plot = scatter)
 
 
 # Log2FC comparison  - scatter plot #
@@ -155,21 +176,21 @@ gridExtra::grid.arrange(comparison_lfc, comparison_pval, nrow = 2)
 
 ### Volcano plot ###
 
-res_naive_pydeseq <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNnaive_test.csv")
-res_adj_pydeseq <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNaware_test.csv")
+res_naive_pydeseq <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNnaive_test1.csv")
+res_adj_pydeseq <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNaware_test1.csv")
 
 lfc_cut <- 1.0
 pval_cut <- .05
-de_gene_colors <- c("Not significant" = "gray", "Down-reg" = "#9C9EDE", "Up-reg"="#E7969C")
+de_gene_colors <- c("Not significant" = "gray", "Down-reg" = "#8491B4B2", "Up-reg"="#E7969C")
 
 res_adj_pydeseq <- res_adj_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
-  #dplyr::mutate(tool = "PyDESeq2") %>% 
-  dplyr::mutate(tumor_type = "COAD") %>% 
+  dplyr::mutate(tool = "PyDESeq2") %>% 
+  #dplyr::mutate(tumor_type = "COAD") %>% 
   dplyr::mutate(method = "CN aware") %>%
   #dplyr::mutate(n_genes = "3000 genes") %>% 
-  dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tumor_type) %>% 
+  dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tool) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
 
@@ -177,19 +198,19 @@ res_naive_pydeseq <- res_naive_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(method = "CN naive") %>% 
-  dplyr::mutate(tumor_type = "COAD") %>% 
-  #dplyr::mutate(tool = "PyDESeq2") %>%
+  #dplyr::mutate(tumor_type = "COAD") %>% 
+  dplyr::mutate(tool = "PyDESeq2") %>%
   #dplyr::mutate(n_genes = "3000 genes") %>% 
-  dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tumor_type) %>% 
+  dplyr::select(X,log2FoldChange, padj, isDE, DEtype, method, tool) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
 
 
-#res_naive_pydeseq <- res_naive_pydeseq[!(row.names(res_naive_pydeseq) %in% c("PYCR1")),] #LUAD
-#res_adj_pydeseq <- res_adj_pydeseq[!(row.names(res_adj_pydeseq) %in% c("CAV1")),] #LUAD
-#res_naive_edge <- res_naive_edge[!(row.names(res_naive_edge) %in% c("PYCR1")),]
+res_naive_pydeseq <- res_naive_pydeseq[!(row.names(res_naive_pydeseq) %in% c("PYCR1")),] #LUAD
+res_adj_pydeseq <- res_adj_pydeseq[!(row.names(res_adj_pydeseq) %in% c("CAV1")),] #LUAD
+res_naive_edge <- res_naive_edge[!(row.names(res_naive_edge) %in% c("PYCR1")),]
 
-colnames(res_naive_pydeseq) <- c("logFC", "padj", "isDE", "DEtype", "method", "tumor_type")
+colnames(res_naive_pydeseq) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
 colnames(res_adj_pydeseq) <- colnames(res_naive_pydeseq) 
 
 d_volcano_luad <- rbind(res_naive_pydeseq, res_adj_pydeseq)
@@ -230,38 +251,42 @@ res_naive_edge <- res_naive_edge %>%
 
 colnames(res_naive_edge) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
 
-#d_volcano_edge <- rbind(res_naive_edge, res_adj_edge)
-#colnames(d_volcano_edge) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
-#colnames(d_volcano_pydeseq) <- colnames(d_volcano_edge)
+d_volcano_edge <- rbind(res_naive_edge, res_aware_edge)
+d_volcano_pydeseq <- rbind(res_naive_pydeseq, res_adj_pydeseq)
+colnames(d_volcano_edge) <- c("logFC", "padj", "isDE", "DEtype", "method", "tool")
+colnames(d_volcano_pydeseq) <- colnames(d_volcano_edge)
 
-#common_genes <- intersect(rownames(d_volcano_edge), rownames(d_volcano_pydeseq))
-#d_volcano_pydeseq <- d_volcano_pydeseq[common_genes, ]
-#d_volcano_edge <- d_volcano_edge[common_genes, ]
-#d_volcano <- rbind(d_volcano_pydeseq, d_volcano_edge)
+common_genes <- intersect(rownames(d_volcano_edge), rownames(d_volcano_pydeseq))
+d_volcano_pydeseq <- d_volcano_pydeseq[common_genes, ]
+d_volcano_edge <- d_volcano_edge[common_genes, ]
+d_volcano <- rbind(d_volcano_pydeseq, d_volcano_edge)
 
 #d_volcano <- rbind(res_naive_pydeseq, res_adj_pydeseq, res_naive_edge, res_adj_edge)
 
 p_volcanos <-  d_volcano %>% 
   ggplot(mapping = aes(x=logFC, y=-log10(padj), col=DEtype)) +
-  geom_point(size=.6) +
+  geom_point(size=.9) +
   theme_bw() +
   scale_color_manual(values = de_gene_colors) +
-  #ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
+  ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
   #ggh4x::facet_nested(factor(n_genes, levels = c("1000 genes", "3000 genes"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
-  ggh4x::facet_nested(factor(method, levels = c("CN naive", "CN aware"))~factor(tumor_type, levels = c("LUAD", "BRCA", "LIHC", "HNSC", "COAD")), scales ="free", independent = "y")+
+  #ggh4x::facet_nested(factor(method, levels = c("CN naive", "CN aware"))~factor(tumor_type, levels = c("LUAD", "BRCA", "LIHC", "HNSC", "COAD")), scales ="free", independent = "y")+
   #facet_wrap(~factor(method, levels = c("CN naive", "CN aware")), nrow=1, scale = "free")+
   ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
   ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
   ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
-  ggplot2::theme(legend.position = 'bottom')
+  ggplot2::theme(legend.position = 'bottom',
+                 legend.text = element_text(size = 12),
+                 strip.text = element_text(size = 12, face = "plain"))
 p_volcanos
 
+ggsave("CN-aware-DGE/plots/main/volcano_luad.png", dpi = 400, width = 5.0, height = 5.0, plot = p_volcanos)
 
 
 ### Impact of CN normalization on DGE analysis ###
 
-res_naive <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNnaive_test.csv")
-res_adj <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNaware_test.csv")
+res_naive <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNnaive_test1.csv")
+res_adj <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNaware_test1.csv")
 
 lfc_cut <- 1.0
 pval_cut <- .05
@@ -269,9 +294,9 @@ pval_cut <- .05
 res_adj <- res_adj %>%
   #dplyr::filter(padj < pval_cut, abs(log2FoldChange) > lfc_cut) %>% 
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
-  dplyr::mutate(DE_type = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
+  dplyr::mutate(DE_type = if_else(!isDE, "n.s", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(method = "CN aware") %>% 
-  dplyr::mutate(cancer_type = "COAD") %>% 
+  dplyr::mutate(cancer_type = "LUAD") %>% 
   dplyr::select(X,log2FoldChange, padj, isDE, DE_type, method, cancer_type) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
@@ -279,15 +304,16 @@ res_adj <- res_adj %>%
 res_naive <- res_naive %>%
   #dplyr::filter(padj < pval_cut, abs(log2FoldChange) > lfc_cut) %>% 
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
-  dplyr::mutate(DE_type = if_else(!isDE, "Not significant", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
+  dplyr::mutate(DE_type = if_else(!isDE, "n.s", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(method = "CN naive") %>% 
-  dplyr::mutate(cancer_type = "COAD") %>% 
+  dplyr::mutate(cancer_type = "LUAD") %>% 
   dplyr::select(X,log2FoldChange, padj, isDE, DE_type, method, cancer_type) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
 
 common_genes <- intersect(rownames(res_naive), rownames(res_adj))
 res_naive <- res_naive[common_genes, ] 
+res_adj <- res_adj[common_genes, ] 
 
 p_data_luad <- rbind(res_naive, res_adj)
 p_data_brca <- rbind(res_naive, res_adj)
@@ -360,7 +386,7 @@ data_coad <- data.frame(
 
 data_long <- rbind(data_luad, data_brca, data_lihc, data_hnsc, data_coad)
 
-`DE group` <- c("Down-reg" = "#8491B4B2", "n.d." = "lightgray", "Up-reg" = "#F5A2A2")
+`DE group` <- c("Down-reg" = "#8491B4B2", "n.s." = "lightgray", "Up-reg" = "#F5A2A2")
 
 ggplot(data_luad,
        aes(x = method, stratum = CN_naive, alluvium = CN_aware, y = freq)) +
@@ -374,7 +400,54 @@ ggplot(data_luad,
   labs(y = "", x = "", fill = "DE group") +
   theme_classic() +
   theme(legend.position = "bottom") 
-  
+
+
+# Sankey dynamic gene groups transitions 
+
+res_naive <- res_naive %>% dplyr::select(DE_type) %>% dplyr::rename(CN_naive = DE_type)
+res_adj <- res_adj %>% dplyr::select(DE_type) %>% dplyr::rename(CN_aware = DE_type)
+
+res_join <- cbind(res_naive, res_adj)
+
+data_flow <- res_join %>%
+  group_by(CN_naive,CN_aware) %>%
+  summarise(freq = n()) %>%
+  ungroup()
+
+data_ggforce <- data_flow  %>%
+  gather_set_data(1:2) %>%        
+  arrange(x,CN_naive,desc(CN_aware))
+
+data_ggforce$CN_naive <- factor(data_ggforce$CN_naive)
+data_ggforce$CN_aware <- factor(data_ggforce$CN_aware)
+
+data_ggforce <- data_ggforce %>%
+  group_by(CN_naive, CN_aware) %>%
+  mutate(y_mid = freq / 2)
+
+g_group_colors <- c("Down-reg" = "#8491B4B2", "n.s" = "lightgray", "Up-reg" = "#F5A2A2")
+
+ggplot(data_ggforce, aes(x = x, id = id, split = y, value = freq)) +
+  geom_parallel_sets(aes(fill = CN_naive), alpha = 0.9, axis.width = 0.2,
+                     n = 4415, strength = 0.5) +
+  geom_parallel_sets_axes(axis.width = 0.25, fill = "gray95",
+                          color = "gray80", linewidth = 0.15) +  
+  #geom_parallel_sets_labels(colour = 'gray35', size = 2.0, angle = 0, fontface = "plain") +
+  scale_fill_manual(values = g_group_colors, name = "Gene group") +
+  scale_color_manual(values = g_group_colors) +
+  scale_x_continuous(breaks = 1:2, labels = c("CN-naive", "CN-aware"))+
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 12, face = "plain"),
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x  = element_blank()
+  )
+
 
 # Define gene groups selection #
 
