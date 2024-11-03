@@ -2,14 +2,14 @@
 
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
 pkgs <- c("dplyr", "ggplot2", "cluster", "factoextra", "heatmaply", "DESeq2", "tidyverse", "DESeq2", "colorspace", 
-          "ggpubr", "ggpointdensity", "ggeasy")
+          "ggpubr", "ggpointdensity", "ggeasy", "patchwork")
 sapply(pkgs, require, character.only = TRUE)
 
 source("CN-aware-DGE/R/utils.R")
 
 # Input data
-data_path <- "TCGA/liver/cnv_tumor.RDS"
-dataset_name <- "LIHC_cnv"
+data_path <- "TCGA/lung/LUAD/cnv_tumor.RDS"
+dataset_name <- "LUAD_cnv"
 cnv_tumor <- readRDS(data_path)
 
 # Clustering patients 
@@ -32,7 +32,7 @@ cnv_tumor <- cnv_tumor %>% as.data.frame() %>% dplyr::select(7,5,13,14,15,18,22,
 cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(1,2),]
 cnv_filt <- subset(cnv_filt, select=-c(Cluster))
 cnv_filt <- as.matrix(t(cnv_filt))
-cnv_filt <- apply(cnv_filt, 2, function(x) ifelse(x > 15, 15, x)) 
+cnv_filt<- apply(cnv_tumor, 2, function(x) ifelse(x > 15, 15, x)) 
 
 hist(rowMeans(cnv_filt),
      main = "LUSC", 
@@ -52,8 +52,8 @@ cnv_mean$geneID <- rownames(cnv_mean)
 
 ## RNA data ##
 
-data_path <- "TCGA/liver/rna_counts.RDS"
-dataset_name <- "LIHC_rna"
+data_path <- "TCGA/lung/LUAD/rna_counts.RDS"
+dataset_name <- "LUAD_rna"
 
 rna <- rna_processing(dataset_name, data_path, cnv_filt)
 rna_norm <- rna[[1]]
@@ -78,8 +78,8 @@ rna_log_normalized <- rna %>% as.matrix() %>% DESeq2::vst()
 
 # Z-score trasformation
 rna_zscore <- t(scale(t(rna_log_normalized)))
-rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% dplyr::select(1:50)
-rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% dplyr::select(51:100) %>% as.matrix()
+rna_zscore_normal <- rna_zscore %>% as.data.frame() %>% dplyr::select(1:10)
+rna_zscore_tumor <- rna_zscore %>% as.data.frame() %>% dplyr::select(11:20) %>% as.matrix()
 
 rna_zscore_normal <- rna_zscore_normal %>% 
   as.data.frame() %>%
@@ -112,16 +112,16 @@ cnv <- cnv[rownames(cnv) %in% rownames(rna_zscore_normal),]
 rna_zscore_tumor <- rna_zscore_tumor %>% dplyr::mutate(sample_type = "Tumor")
 rna_zscore_normal <- rna_zscore_normal %>% dplyr::mutate(sample_type = "Normal")
 
-p_lihc_n <- cbind(rna_zscore_normal, cnv)  
-p_lihc_n$cnv <- as.factor(p_lihc_n$cnv)
-p_lihc_t <- cbind(rna_zscore_tumor, cnv) 
-p_lihc_t$cnv <- as.factor(p_lihc_t$cnv)
-plot_all_lihc <- rbind(p_lihc_n, p_lihc_t) %>% dplyr::mutate(cancer_type = "LIHC")
+p_luad_n <- cbind(rna_zscore_normal, cnv)  
+p_luad_n$cnv <- as.factor(p_luad_n$cnv)
+p_luad_t <- cbind(rna_zscore_tumor, cnv) 
+p_luad_t$cnv <- as.factor(p_luad_t$cnv)
+plot_all_luad <- rbind(p_luad_n, p_luad_t) %>% dplyr::mutate(cancer_type = "LUAD")
 
 #Apply filtering
-plot_all_lihc_filt <- plot_all_lihc %>% 
+plot_all_luad_filt <- plot_all_luad %>% 
   dplyr::filter(cnv=="2" & abs(zscore_mean) <= 0.5 | cnv=="1" | cnv=="3" | cnv=="4" | cnv=="5")
-p_lihc_t <- p_lihc_t %>% 
+p_luad_t <- p_luad_t %>% 
   dplyr::filter(cnv=="2" & abs(zscore_mean) <= 0.5 | cnv=="1" | cnv=="3" | cnv=="4" | cnv=="5")
 
 p_brca_t <- p_brca_t %>% dplyr::mutate(cancer_type = "BRCA")
@@ -130,80 +130,71 @@ p_lihc_t <- p_lihc_t %>% dplyr::mutate(cancer_type = "LIHC")
 
 p_tumor <- rbind(p_brca_t, p_lusc_t, p_lihc_t)
 
-#Median zscore
-#median_z_scores <- p_luad_t %>%
-  #group_by(cnv) %>%
-  #summarise(zscore_median = median(zscore_mean, na.rm = TRUE)) %>% 
-  #as.data.frame()
-
-#m_zscore <- ggplot(median_z_scores, aes(x = cnv, y = zscore_median)) +
-  #geom_point() +  
-  #geom_smooth(method='lm') + 
-  #labs(title = "TCGA", x = "Copy Number", y = "Median Z score") +
-  #theme_bw()+
-  #scale_y_continuous(breaks = seq(-0.8, 0.8, 0.1))
-#m_zscore
 
 #Boxplot #
 
-summary.stats <- p_lihc_t %>%
-  group_by(cnv) %>%
-  get_summary_stats() %>%
-  select(cnv, n)
-summary.stats
+#summary.stats <- p_lihc_t %>%
+  #group_by(cnv) %>%
+  #get_summary_stats() %>%
+  #select(cnv, n)
+#summary.stats
 
-summary.plot <- ggsummarytable(
-  summary.stats, x = "cnv", y = c("n"),
-  ggtheme = theme_bw()
-)
-summary.plot
+#summary.plot <- ggsummarytable(
+  #summary.stats, x = "cnv", y = c("n"),
+  #ggtheme = theme_bw()
+#)
+#summary.plot
 
 col <- qualitative_hcl(5, palette = "Warm")
 
-p_tumor$cnv <- factor(p_tumor$cnv, levels = c(1, 2, 3, 4, 5))
+p_luad_t$cnv <- factor(p_luad_t$cnv, levels = c(1, 2, 3, 4, 5))
 
-bxp_t <- ggplot(p_tumor, aes(x = cnv, y = zscore_mean, fill = cnv)) + 
+bxp_t <- ggplot(p_luad_t, aes(x = cnv, y = zscore_mean, fill = cnv)) + 
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch = F, show.legend = F)+
   geom_smooth(method = "loess", formula = y ~ x, se=FALSE, color="darkblue", aes(group=1), linetype = 'dashed')+
   labs(x="CN group", y = "mRNA Z-score")+
-  facet_wrap(~cancer_type)+
+  #facet_wrap(~cancer_type)+
   theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
   ggplot2::theme(legend.position = 'none')+
   theme_bw()+
   scale_fill_manual(values=col)+
   font("xy.text", size = 12, color = "black", face = "plain")+
-  font("title", size = 12, color = "black")+
+  font("title", size = 16, color = "black")+
   font("xlab", size = 12)+
   font("ylab", size = 12)+
-  #ggtitle("LIHC")+
-  theme(legend.position = "")+
-  theme(plot.title = element_text(hjust = 0.5))
+  ggtitle("TCGA-LUAD")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position = "")
 bxp_t
 
 plot_all_filt <- rbind(plot_all_brca_filt, plot_all_lihc_filt, plot_all_lusc_filt)
 plot_all_filt$cnv <- factor(plot_all_filt$cnv, levels = c(1, 2, 3, 4, 5))
 
 #Comparison boxplot Tumor vs Normal
-bxp_all <- ggplot(plot_all_filt, aes(x = cnv, y = zscore_mean, fill = sample_type)) + 
+bxp_all <- ggplot(plot_all_luad_filt, aes(x = cnv, y = zscore_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
   labs(x="CN group", y = "mRNA Z-score", title = "")+
   labs(fill = "sample type")+
   theme_bw()+
   ggplot2::theme(legend.position = 'bottom')+
-  facet_wrap(~cancer_type)+
+  #facet_wrap(~cancer_type)+
   scale_fill_manual(values=c("lightgray", "#D7C78B"))+
   font("xy.text", size = 12, color = "black", face = "plain")+
-  font("title", size = 12, color = "black")+
+  font("title", size = 16, color = "black")+
   font("xlab", size = 12)+
   font("ylab", size = 12)+
-  #ggtitle("LUSC")+
-  theme(plot.title = element_text(hjust = 0.5))
+  ggtitle("TCGA-LUAD")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position = "bottom", legend.text = element_text(size = 14)) 
 bxp_all
 
-#ggarrange(bxp, summary.plot, ncol = 1, align = "v", heights = c(0.80, 0.20))
-gridExtra::grid.arrange(bxp_t, bxp_all, nrow = 2)
 
+# Main figure 
 
+main_fig <- patchwork::wrap_plots(A=bxp_t, B=bxp_all)+
+                      plot_annotation(tag_levels = "A")
+
+ggsave("CN-aware-DGE/plots/main/boxplot_luad.png", dpi = 400, width = 10.0, height = 6.0, plot = main_fig)
 
 
 
