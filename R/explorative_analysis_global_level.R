@@ -35,7 +35,7 @@ cnv_filt <- as.matrix(t(cnv_filt))
 cnv_filt<- apply(cnv_tumor, 2, function(x) ifelse(x > 15, 15, x)) 
 
 hist(rowMeans(cnv_filt),
-     main = "LUSC", 
+     main = "LUAD", 
      xlab = "CN state",
      ylab = "Proportion",
      col = "#E1DEFC",
@@ -133,18 +133,6 @@ p_tumor <- rbind(p_brca_t, p_lusc_t, p_lihc_t)
 
 #Boxplot #
 
-#summary.stats <- p_lihc_t %>%
-  #group_by(cnv) %>%
-  #get_summary_stats() %>%
-  #select(cnv, n)
-#summary.stats
-
-#summary.plot <- ggsummarytable(
-  #summary.stats, x = "cnv", y = c("n"),
-  #ggtheme = theme_bw()
-#)
-#summary.plot
-
 col <- qualitative_hcl(5, palette = "Warm")
 
 p_luad_t$cnv <- factor(p_luad_t$cnv, levels = c(1, 2, 3, 4, 5))
@@ -156,45 +144,49 @@ bxp_t <- ggplot(p_luad_t, aes(x = cnv, y = zscore_mean, fill = cnv)) +
   #facet_wrap(~cancer_type)+
   theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
   ggplot2::theme(legend.position = 'none')+
-  theme_bw()+
+  theme_classic()+
   scale_fill_manual(values=col)+
-  font("xy.text", size = 12, color = "black", face = "plain")+
+  font("xy.text", size = 22, color = "black", face = "plain")+
   font("title", size = 16, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)+
-  ggtitle("TCGA-LUAD")+
+  font("xlab", size = 22)+
+  font("ylab", size = 22)+
+  ggtitle("")+
   theme(plot.title = element_text(hjust = 0.5))+
   theme(legend.position = "")
 bxp_t
+
+ggsave("CN-aware-DGE/plots/main/boxplot_luad.png", dpi = 400, width = 5.0, height = 5.0, plot = bxp_t)
 
 plot_all_filt <- rbind(plot_all_brca_filt, plot_all_lihc_filt, plot_all_lusc_filt)
 plot_all_filt$cnv <- factor(plot_all_filt$cnv, levels = c(1, 2, 3, 4, 5))
 
 #Comparison boxplot Tumor vs Normal
+
 bxp_all <- ggplot(plot_all_luad_filt, aes(x = cnv, y = zscore_mean, fill = sample_type)) + 
   geom_boxplot(position = position_dodge())+
   labs(x="CN group", y = "mRNA Z-score", title = "")+
   labs(fill = "sample type")+
-  theme_bw()+
+  theme_classic()+
   ggplot2::theme(legend.position = 'bottom')+
   #facet_wrap(~cancer_type)+
   scale_fill_manual(values=c("lightgray", "#D7C78B"))+
-  font("xy.text", size = 12, color = "black", face = "plain")+
+  font("xy.text", size = 22, color = "black", face = "plain")+
   font("title", size = 16, color = "black")+
-  font("xlab", size = 12)+
-  font("ylab", size = 12)+
-  ggtitle("TCGA-LUAD")+
+  font("xlab", size = 22)+
+  font("ylab", size = 22)+
+  ggtitle("")+
   theme(plot.title = element_text(hjust = 0.5))+
-  theme(legend.position = "bottom", legend.text = element_text(size = 14)) 
+  theme(legend.position = "bottom", legend.text = element_text(size = 20),
+        legend.title = element_text(size = 22)) 
 bxp_all
+
+ggsave("CN-aware-DGE/plots/main/boxplot_luad_tumVsNorm.png", dpi = 400, width = 5.0, height = 5.0, plot = bxp_all)
 
 
 # Main figure 
-
-main_fig <- patchwork::wrap_plots(A=bxp_t, B=bxp_all)+
-                      plot_annotation(tag_levels = "A")
-
-ggsave("CN-aware-DGE/plots/main/boxplot_luad.png", dpi = 400, width = 10.0, height = 6.0, plot = main_fig)
+#main_fig <- patchwork::wrap_plots(A=bxp_t, B=bxp_all)+
+                      #plot_annotation(tag_levels = "A")
+#ggsave("CN-aware-DGE/plots/main/boxplot_luad.png", dpi = 400, width = 10.0, height = 6.0, plot = main_fig)
 
 
 

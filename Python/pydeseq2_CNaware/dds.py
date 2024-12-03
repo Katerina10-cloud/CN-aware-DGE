@@ -16,11 +16,11 @@ from scipy.stats import trim_mean  # type: ignore
 
 from def_inference import DefInference                              #import custom DefInference
 from inference import Inference                                     #import custom Inference 
-import utils_pydeseq2CN
-from utils_pydeseq2CN import fit_rough_dispersions
-from utils_pydeseq2CN import fit_moments_dispersions2
-from utils_pydeseq2CN import grid_fit_beta
-from utils_pydeseq2CN import irls_glm
+import utils_CNaware
+from utils_CNaware import fit_rough_dispersions
+from utils_CNaware import fit_moments_dispersions2
+from utils_CNaware import grid_fit_beta
+from utils_CNaware import irls_glm
 
 from pydeseq2.preprocessing import deseq2_norm_fit
 from pydeseq2.preprocessing import deseq2_norm_transform

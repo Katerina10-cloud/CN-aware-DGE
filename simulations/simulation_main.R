@@ -10,11 +10,12 @@ sapply(pkgs, require, character.only = TRUE)
 simulate_data <- function(n_samples, n_genes) {
   
   # Load data
-  rna <- read.csv("TCGA/brca/test/rna_test_1.csv") %>% 
+  rna <- read.csv("TCGA/brca/test/rna_test_all_genes.csv") %>% 
     remove_rownames %>% column_to_rownames(var = "X")
-  metadata <- read.csv("TCGA/brca/test/metadata_1.csv") %>% 
+  metadata <- read.csv("TCGA/brca/test/metadata_all_genes.csv") %>% 
     remove_rownames %>% column_to_rownames(var = "X")
-  cnv <- readRDS("TCGA/brca/cnv_filt_1.RDS") %>% as.data.frame()
+  cnv <- read.csv("TCGA/brca/test/cnv_test_all_genes.csv") %>% remove_rownames %>% column_to_rownames(var = "X") %>% 
+    as.data.frame()
   
   # Calculate gene numbers for each category based on `n_genes`
   n_dosage_sensitive <- ceiling(0.1 * n_genes)
@@ -62,20 +63,22 @@ simulate_data <- function(n_samples, n_genes) {
   cnv_ins <- matrix(1, nrow(d_insensitive), ncol(d_insensitive))
   colnames(cnv_ins) <- colnames(d_insensitive)
   rownames(cnv_ins) <- rownames(d_insensitive)
+  cnv_ins <- as.data.frame(cnv_ins)
   
   # Dosage-sensitve genes
   d_sensitive_tum <- rna_tumor_baseline[(n_dosage_insensitive + 1):(n_dosage_insensitive + n_dosage_sensitive), ]
   d_sensitive_norm <- rna_normal_baseline[(n_dosage_insensitive + 1):(n_dosage_insensitive + n_dosage_sensitive), ]
   cn_tumor <- cnv[1:n_dosage_sensitive, ]
+  cn_tumor <- cn_tumor[,111:220]
   cn_tumor <- cn_tumor[,1:n_samples]
   colnames(cn_tumor) <- colnames(d_sensitive_tum)
   rownames(cn_tumor) <- rownames(d_sensitive_tum)
   d_sensitive <- cbind(d_sensitive_norm, d_sensitive_tum)
-  cn_normal <- matrix(2, nrow(d_sensitive_norm), n_samples)
+  cn_normal <- matrix(1, nrow(d_sensitive_norm), n_samples)
   cnv_sens <- cbind(cn_normal, cn_tumor)
   colnames(cnv_sens) <- colnames(d_sensitive)
   rownames(cnv_sens) <- rownames(d_sensitive)
-  cnv_sens <- cnv_sens / 2
+  #cnv_sens <- cnv_sens / 2
   d_sensitive <- ceiling(d_sensitive * cnv_sens)
   
   
@@ -127,11 +130,10 @@ generate_and_save_simulations <- function(n_samples, n_genes, num_replicates) {
   }
 }
 
-n_samples <- 10 # 20, 40
-n_genes <- 1000 # 3000, 5000
+#n_samples <- 100 # 20, 40
+#n_genes <- 1000 # 3000, 5000
 
-generate_and_save_simulations(n_samples = 40, n_genes = 3000, num_replicates = 10)
-
+generate_and_save_simulations(n_samples = 100, n_genes = 3000, num_replicates = 10)
 
 
 # Sampling of Copy Number data #

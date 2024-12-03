@@ -8,9 +8,9 @@ sapply(pkgs, require, character.only = TRUE)
 #cnv <- read.csv("TCGA/lung/LUAD/cnv_test_1.csv")
 #metadata <- read.csv("TCGA/lung/LUAD/metadata_1.csv")
 
-rna <- read.csv("CN-aware-DGE/simulations/data/replicates/10_rna_join_40_3000.csv")
-cnv <- read.csv("CN-aware-DGE/simulations/data/replicates/10_cn_join_40_3000.csv") %>% as.data.frame()
-metadata <- read.csv("CN-aware-DGE/simulations/data/replicates/10_metadata_40_3000.csv")
+rna <- read.csv("CN-aware-DGE/simulations/data/replicates/10_rna_join_100_5000.csv")
+cnv <- read.csv("CN-aware-DGE/simulations/data/replicates/10_cn_join_100_5000.csv") %>% as.data.frame()
+metadata <- read.csv("CN-aware-DGE/simulations/data/replicates/10_metadata_100_5000.csv")
 
 cnv <- cnv %>% remove_rownames %>% column_to_rownames(var="X")
 rna <- rna %>% remove_rownames %>% column_to_rownames(var="X")
@@ -47,7 +47,7 @@ res_aware_edge <- edgeR::topTags(lrt_adj, n=Inf)$table
 rownames_idx <- match(rownames(res_naive_edge), rownames(res_aware_edge))
 res_aware_edge <- res_aware_edge[rownames_idx,]
 
-res_naive_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_naive/1_res_CNnaive_10_3000.csv")
+res_naive_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_naive/1_res_CNnaive_100_5000.csv")
 #res_aware_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq_5000/cn_aware/1_res_CNaware_10_5000.csv")
 res_naive_pydeseq <- res_naive_pydeseq %>% remove_rownames %>% column_to_rownames(var="X") 
 
@@ -58,8 +58,8 @@ rownames_idx <- match(rownames(res_naive_pydeseq), rownames(res_naive_edge))
 res_aware_edge <- res_aware_edge[rownames_idx,] %>% na.omit()
 res_naive_edge <- res_naive_edge[rownames_idx,] %>% na.omit()
 
-saveRDS(res_naive_edge, file = "CN-aware-DGE/simulations/results/replicates_edgeR/cn_naive/10_res_CNnaive_40_3000.RDS")
-saveRDS(res_aware_edge, file = "CN-aware-DGE/simulations/results/replicates_edgeR/cn_aware/10_res_CNaware_40_3000.RDS")
+saveRDS(res_naive_edge, file = "CN-aware-DGE/simulations/results/replicates_edgeR/cn_naive/10_res_CNnaive_100_5000.RDS")
+saveRDS(res_aware_edge, file = "CN-aware-DGE/simulations/results/replicates_edgeR/cn_aware/10_res_CNaware_100_5000.RDS")
 
 
 # Volcano plot #

@@ -10,8 +10,8 @@ from joblib import parallel_backend
 from scipy.optimize import minimize  # type: ignore
 
 import inference
-import utils_pydeseq2CN 
-from utils_pydeseq2CN import fit_lin_mu
+import utils_CNaware 
+from utils_CNaware import fit_lin_mu
 #from utils_pydeseq2CN import nbinomGLM
 
 from pydeseq2 import utils

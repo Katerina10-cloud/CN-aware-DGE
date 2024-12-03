@@ -67,9 +67,9 @@ evaluate_simulation_performance <- function(n_samples, n_genes) {
     # Calculate performance metrics for each method and add to metrics_df
     metrics_df <- rbind(
       metrics_df,
-      data.frame(Method = "PyDESeq2-CN-naive", t(evaluate_performance(true_labels, predicted_naive_pydeseq)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "PyDESeq2-CN-aware", t(evaluate_performance(true_labels, predicted_aware_pydeseq)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "EdgeR-CN-naive", t(evaluate_performance(true_labels, predicted_naive_edge)), SampleSize = n_samples, Replicate = replicate),
+      data.frame(Method = "PyDESeq2", t(evaluate_performance(true_labels, predicted_naive_pydeseq)), SampleSize = n_samples, Replicate = replicate),
+      data.frame(Method = "DeCNVeil", t(evaluate_performance(true_labels, predicted_aware_pydeseq)), SampleSize = n_samples, Replicate = replicate),
+      data.frame(Method = "EdgeR", t(evaluate_performance(true_labels, predicted_naive_edge)), SampleSize = n_samples, Replicate = replicate),
       data.frame(Method = "EdgeR-CN-aware", t(evaluate_performance(true_labels, predicted_aware_edge)), SampleSize = n_samples, Replicate = replicate)
     )
   }
@@ -82,18 +82,23 @@ evaluate_simulation_performance <- function(n_samples, n_genes) {
 res_10_5000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 5000)
 res_20_5000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 5000)
 res_40_5000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 5000)
+res_100_5000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 5000)
 
 res_10_1000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 1000)
 res_20_1000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 1000)
 res_40_1000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 1000)
+res_100_1000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 1000)
 
 res_10_3000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 3000)
 res_20_3000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 3000)
 res_40_3000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 3000)
+res_100_3000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 3000)
 
 saveRDS(res_10_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_10_3000.RDS")
 saveRDS(res_20_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_20_3000.RDS")
 saveRDS(res_40_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_40_3000.RDS")
+saveRDS(res_100_5000, file = "CN-aware-DGE/simulations/results/res_performance/res_100_5000.RDS")
+saveRDS(res_100_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_100_3000.RDS")
 
 
 # Performance metrics plot #
@@ -101,20 +106,23 @@ saveRDS(res_40_3000, file = "CN-aware-DGE/simulations/results/res_performance/re
 res_10_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_5000.RDS")
 res_20_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_5000.RDS")
 res_40_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_5000.RDS")
+res_100_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_5000.RDS")
 
 res_10_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_1000.RDS")
 res_20_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_1000.RDS")
 res_40_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_1000.RDS")
+res_100_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_1000.RDS")
 
 res_10_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_3000.RDS")
 res_20_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_3000.RDS")
 res_40_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_3000.RDS")
+res_100_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_3000.RDS")
 
-data_join_5000 <- rbind(res_10_5000, res_20_5000, res_40_5000)
-data_join_1000 <- rbind(res_10_1000, res_20_1000, res_40_1000)
-data_join_3000 <- rbind(res_10_3000, res_20_3000, res_40_3000)
+data_join_5000 <- rbind(res_10_5000, res_20_5000, res_40_5000, res_100_5000)
+data_join_1000 <- rbind(res_10_1000, res_20_1000, res_40_1000, res_100_1000)
+data_join_3000 <- rbind(res_10_3000, res_20_3000, res_40_3000, res_100_3000)
 
-summary_df <- data_join_3000 %>%
+summary_df <- data_join_5000 %>%
   group_by(Method, SampleSize) %>%
   summarize(
     Precision_Mean = mean(Precision),
@@ -141,19 +149,30 @@ plot_df_1000 <- plot_df %>%
   mutate(SampleSize_transformed = case_when(
     SampleSize == 10 ~ 1,
     SampleSize == 20 ~ 2,  
-    SampleSize == 40 ~ 3
+    SampleSize == 40 ~ 3,
+    SampleSize == 100 ~ 4
   )) %>% 
   mutate(GeneSize = "1000 genes")
+
+plot_df_5000 <- plot_df %>%
+  mutate(SampleSize_transformed = case_when(
+    SampleSize == 10 ~ 1,
+    SampleSize == 20 ~ 2,  
+    SampleSize == 40 ~ 3,
+    SampleSize == 100 ~ 4
+  )) %>% 
+  mutate(GeneSize = "5000 genes")
 
 plot_df_3000 <- plot_df %>%
   mutate(SampleSize_transformed = case_when(
     SampleSize == 10 ~ 1,
     SampleSize == 20 ~ 2,  
-    SampleSize == 40 ~ 3
+    SampleSize == 40 ~ 3,
+    SampleSize == 100 ~ 4
   )) %>% 
   mutate(GeneSize = "3000 genes")
 
-plot_df <- rbind(plot_df_1000, plot_df_3000)
+plot_df <- rbind(plot_df_1000, plot_df_3000, plot_df_5000)
 
 method_colors <- c("PyDESeq2-CN-aware" = "#ED665D", "PyDESeq2-CN-naive" = "#67BF5C", "EdgeR-CN-aware" = "#729ECE", "EdgeR-CN-naive" = "#AD8BC9") 
 
@@ -164,38 +183,37 @@ performance_plot <- ggplot(plot_df, aes(x = SampleSize_transformed, y = Mean, co
   ggh4x::facet_nested(factor(GeneSize) ~ factor(Metric)) +
   #facet_wrap(~ Metric, scales = "free_y") +
   labs(title = "", x = "sample size", y = "Performance metric") +
-  scale_x_continuous(breaks = c(1, 2, 3), labels = c("10", "20", "40")) +  
+  scale_x_continuous(breaks = c(1, 2, 3, 4), labels = c("10", "20", "40", "100")) +  
   scale_y_continuous(limits = c(0.7, 1), breaks = seq(0, 1, by = 0.1)) + 
   scale_color_manual(values = method_colors) +
   theme_bw()+
   theme(
-    strip.text = element_text(size = 18, face = "plain"),       
-    axis.title.x = element_text(size = 16),                     
-    axis.title.y = element_text(size = 16),                     
-    axis.text.x = element_text(size = 14),                      
-    axis.text.y = element_text(size = 14),                      
-    legend.text = element_text(size = 13),                      
-    legend.title = element_text(size = 15),
+    strip.text = element_text(size = 18, face = "plain", color = "black"),       
+    axis.title.x = element_text(size = 16, color = "black"),                     
+    axis.title.y = element_text(size = 16, color = "black"),                     
+    axis.text.x = element_text(size = 14, color = "black"),                      
+    axis.text.y = element_text(size = 14, color = "black"),                      
+    legend.text = element_text(size = 13, color = "black"),                      
+    legend.title = element_text(size = 15, color = "black"),
     legend.position = "right"
   )
 performance_plot
 
-ggsave("CN-aware-DGE/plots/main/performance_plot_suppl.png", dpi = 400, width = 10.0, height = 5.5, plot = performance_plot)    
-
+ggsave("CN-aware-DGE/plots/main/performance_plot.png", dpi = 400, width = 10.0, height = 6.0, plot = performance_plot)    
 
 
 # Results DGE Methods (PyDESeq2, edgeR)
 
 rna_counts_sim_10_3000 <- readRDS("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_10_3000_brca.rds")
 rna_counts_sim_20_3000 <- readRDS("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_20_3000_brca.rds")
-rna_counts_sim_40_3000 <- readRDS("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_40_3000_brca.rds")
+rna_counts_sim_100_3000 <- readRDS("CN-aware-DGE/simulations/results/replicates_rna_counts_sim/rna_counts_sim_100_3000_brca.rds")
 
-res_naive_pydeseq <- read.csv("CN-aware-DGE/simulations/results/pydeseq/res_CNnaive_40_3000.csv")
-res_aware_pydeseq <- read.csv("CN-aware-DGE/simulations/results/pydeseq/res_CNaware_40_3000.csv")
-res_naive_edge <- readRDS("CN-aware-DGE/simulations/results/edgeR/res_CNnaive_40_3000.RDS")
-res_aware_edge <- readRDS("CN-aware-DGE/simulations/results/edgeR/res_CNaware_40_3000.RDS")
+res_naive_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_naive/1_res_CNnaive_100_3000.csv")
+res_aware_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_aware/1_res_CNaware_100_3000.csv")
+res_naive_edge <- readRDS("CN-aware-DGE/simulations/results/replicates_edgeR/cn_naive/1_res_CNnaive_100_3000.RDS")
+res_aware_edge <- readRDS("CN-aware-DGE/simulations/results/replicates_edgeR/cn_aware/1_res_CNaware_100_3000.RDS")
 
-true_labels <- rna_counts_sim_40_3000@variable.annotations[["differential.expression"]]
+true_labels <- rna_counts_sim_100_3000@variable.annotations[["differential.expression"]]
 
 res_naive_pydeseq <- res_naive_pydeseq %>% dplyr::select(X,log2FoldChange, padj) %>% 
   remove_rownames %>% 
@@ -207,11 +225,11 @@ res_aware_pydeseq <- res_aware_pydeseq %>% dplyr::select(X,log2FoldChange, padj)
   column_to_rownames(var="X") %>% 
   dplyr::rename(logFC = log2FoldChange)
 
-res_naive_edge <- res_naive_edge %>% dplyr::select(logFC, FDR) %>% 
-  dplyr::rename(padj = FDR)
+res_naive_edge <- res_naive_edge %>% dplyr::select(logFC, padj) %>% 
+  dplyr::rename(padj = padj)
 
-res_aware_edge <- res_aware_edge %>% dplyr::select(logFC, FDR) %>% 
-  dplyr::rename(padj = FDR)
+res_aware_edge <- res_aware_edge %>% dplyr::select(logFC, padj) %>% 
+  dplyr::rename(padj = padj)
 
 #common_genes <- intersect(rownames(res_aware_pydeseq), rownames(res_aware_edge))
 #res_aware_pydeseq <- res_aware_pydeseq[common_genes, ] %>% data.frame()
@@ -222,7 +240,7 @@ res_aware_edge <- res_aware_edge[rownames_idx,] %>% na.omit()
 res_naive_edge <- res_naive_edge[rownames_idx,] %>% na.omit()
 
 # ROC curve calculation
-true_labels <- rna_counts_sim_40_3000@variable.annotations[["differential.expression"]]
+true_labels <- rna_counts_sim_100_3000@variable.annotations[["differential.expression"]]
 #true_labels_cleaned <- true_labels[1:4999]
 
 
@@ -235,10 +253,10 @@ p3 <- as.data.frame(res_aware_edge$padj)
 p4 <- as.data.frame(res_aware_pydeseq$padj)
 
 
-p1 <- p1[1:4999,]
-p2 <- p2[1:4999,]
-p3 <- p3[1:4999,]
-p4 <- p4[1:4999,]
+p1 <- p1[1:2995,]
+p2 <- p2[1:2995,]
+p3 <- p3[1:2995,]
+p4 <- p4[1:2995,]
 
 p_values <- cbind(p1, p2, p3, p4)
 colnames(p_values) <- c("PyDESeq-CN-naive", "EdgeR-CN-naive", "EdgeR-CN-aware", "PyDESeq-CN-aware")
@@ -385,13 +403,83 @@ roc <- diagplotRoc(
   output = "file", 
   line_colors = c("#729ECE", "#AD8BC9", "#67BF5C", "#ED665D"),
   line_width = 6,
-  plot_title = "Sample size: 40; Genes: 3000",
+  plot_title = "Sample size: 100; Genes: 3000",
   axis_text_size = 2.0,
   legend_text_size = 1.6,
   font.main = 1,
   title_text_size = 2.4, 
   margin = c(6, 6, 6, 5),
-  path = "CN-aware-DGE/plots/supplementary/roc_40_3000.png"
+  path = "CN-aware-DGE/plots/main/roc_100_3000.png"
 )
 roc
 
+
+# Radar chart #
+install.packages("fmsb")
+library(fmsb)
+library(scales)  # For alpha transparency in colors
+
+data_1000 <- data.frame(
+  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
+  PyDESeq2 = c(0.779, 0.774, 0.78, 0.916),
+  DeCNVeil = c(0.836, 0.904, 0.98, 0.988),
+  EdgeR = c(0.735, 0.796, 0.80, 0.915),
+  EdgeR_CN_aware = c(0.848, 0.904, 0.979, 0.982)
+  )
+
+data_3000 <- data.frame(
+  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
+  PyDESeq2 = c(0.774, 0.812, 0.819, 0.902),
+  DeCNVeil = c(0.867, 0.936, 0.971, 0.991),
+  EdgeR = c(0.762, 0.822, 0.835, 0.901),
+  EdgeR_CN_aware = c(0.855, 0.929, 0.966, 0.989)
+)
+
+data_5000 <- data.frame(
+  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
+  PyDESeq2 = c(0.76, 0.809, 0.824, 0.897),
+  DeCNVeil = c(0.87, 0.935, 0.97, 0.993),
+  EdgeR = c(0.767, 0.80, 0.834, 0.908),
+  EdgeR_CN_aware = c(0.871, 0.935, 0.967, 0.99)
+)
+
+transposed <- as.data.frame(t(data_3000[,-1]))
+colnames(transposed) <- data_3000$Sample_Size
+radar_data <- as.data.frame(rbind(
+  Max = rep(1.0, ncol(transposed)),  # Set max grid value to 1
+  Min = rep(0.6, ncol(transposed)),  # Set min grid value to 0.6 (lowest AUC)
+  transposed
+))
+
+colors <- c("#0072B2", "#6666FF", "#67BF5C", "#ED665D")
+method_labels <- c("PyDESeq2", "EdgeR-CN-aware", "EdgeR", "DeCNVeil")
+
+create_radarchart <- function(data, color = colors, 
+                              vlabels = colnames(data), vlcex = 1.4,
+                              caxislabels = c(0.6, 0.7, 0.8, 0.9, 1.0), 
+                              title = "AUC - 3000 genes") {
+  radarchart(
+    data, axistype = 1,
+    pcol = color,                      # Line color for each method
+    pfcol = alpha(color, 0.1),         # Transparent fill for each polygon
+    plwd = 3,                          # Line width
+    plty = 1,                          # Line type (solid lines)
+    cglcol = "darkgray", cglty = 1,    # Gridline color and type
+    cglwd = 1.0,                       # Gridline width
+    axislabcol = "black",              # Axis label color
+    vlcex = vlcex,                     # Axis label size
+    vlabels = vlabels,                 # Sample size labels at angles
+    caxislabels = caxislabels          # Custom grid labels                     
+  )
+  title(main = title, font.main = 1, cex.main = 1.4)
+}
+
+vlabels <- c("10  ", "20  ", "40  ", "100  ")
+create_radarchart(radar_data, vlabels = vlabels)
+
+legend("bottomleft", legend = method_labels, col = colors, 
+       lty = 1, lwd = 2, bty = "n", cex = 1.2, 
+       title = "Methods")
+
+
+create_radarchart(radar_data)
