@@ -68,7 +68,7 @@ evaluate_simulation_performance <- function(n_samples, n_genes) {
     metrics_df <- rbind(
       metrics_df,
       data.frame(Method = "PyDESeq2", t(evaluate_performance(true_labels, predicted_naive_pydeseq)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "DeCNVeil", t(evaluate_performance(true_labels, predicted_aware_pydeseq)), SampleSize = n_samples, Replicate = replicate),
+      data.frame(Method = "DeConveil", t(evaluate_performance(true_labels, predicted_aware_pydeseq)), SampleSize = n_samples, Replicate = replicate),
       data.frame(Method = "EdgeR", t(evaluate_performance(true_labels, predicted_naive_edge)), SampleSize = n_samples, Replicate = replicate),
       data.frame(Method = "EdgeR-CN-aware", t(evaluate_performance(true_labels, predicted_aware_edge)), SampleSize = n_samples, Replicate = replicate)
     )
@@ -78,103 +78,71 @@ evaluate_simulation_performance <- function(n_samples, n_genes) {
   return(metrics_df)
 }
 
+n_genes_list <- c(1000, 3000, 5000)
+n_samples_list <- c(10, 20, 40, 100)
 
-res_10_5000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 5000)
-res_20_5000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 5000)
-res_40_5000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 5000)
-res_100_5000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 5000)
+for (n_genes in n_genes_list) {
+  for (n_samples in n_samples_list) {
+    res <- evaluate_simulation_performance(n_samples = n_samples, n_genes = n_genes)
+    file_path <- sprintf("CN-aware-DGE/simulations/results/res_performance/res_%d_%d.RDS", n_samples, n_genes)
+    saveRDS(res, file = file_path)
+  }
+}
 
-res_10_1000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 1000)
-res_20_1000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 1000)
-res_40_1000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 1000)
-res_100_1000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 1000)
+load_results <- function(n_genes, sample_sizes, base_path) {
+  files <- sprintf("%s/res_%d_%d.RDS", base_path, sample_sizes, n_genes)
+  results <- lapply(files, readRDS)
+  bind_rows(results)
+}
 
-res_10_3000 <- evaluate_simulation_performance(n_samples = 10, n_genes = 3000)
-res_20_3000 <- evaluate_simulation_performance(n_samples = 20, n_genes = 3000)
-res_40_3000 <- evaluate_simulation_performance(n_samples = 40, n_genes = 3000)
-res_100_3000 <- evaluate_simulation_performance(n_samples = 100, n_genes = 3000)
+# Load datasets
+base_path <- "~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance"
+sample_sizes <- c(10, 20, 40, 100)
 
-saveRDS(res_10_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_10_3000.RDS")
-saveRDS(res_20_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_20_3000.RDS")
-saveRDS(res_40_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_40_3000.RDS")
-saveRDS(res_100_5000, file = "CN-aware-DGE/simulations/results/res_performance/res_100_5000.RDS")
-saveRDS(res_100_3000, file = "CN-aware-DGE/simulations/results/res_performance/res_100_3000.RDS")
+data_1000 <- load_results(1000, sample_sizes, base_path)
+data_5000 <- load_results(5000, sample_sizes, base_path)
 
+rename_methods <- function(data) {
+  data %>%
+    mutate(Method = case_when(
+      Method == "PyDESeq2-CN-naive" ~ "PyDESeq2",
+      Method == "PyDESeq2-CN-aware" ~ "DeConveil",
+      Method == "EdgeR-CN-naive" ~ "EdgeR",
+      Method == "EdgeR-CN-aware" ~ "ABCD-DNA",
+      TRUE ~ Method
+    ))
+}
+
+data_1000 <- rename_methods(data_1000)
+data_5000 <- rename_methods(data_5000)
+
+# Combine and summarize the data
+summarize_performance <- function(data) {
+  data %>%
+    group_by(Method, SampleSize) %>%
+    summarize(
+      Precision_Mean = mean(Precision),
+      Precision_SD = sd(Precision),
+      Specificity_Mean = mean(Specificity),
+      Specificity_SD = sd(Specificity),
+      Accuracy_Mean = mean(Accuracy),
+      Accuracy_SD = sd(Accuracy),
+      .groups = "drop"
+    ) %>%
+    pivot_longer(cols = c(Precision_Mean, Precision_SD, Specificity_Mean, Specificity_SD, Accuracy_Mean, Accuracy_SD),
+                 names_to = c("Metric", "Stat"),
+                 names_sep = "_", values_to = "Value") %>%
+    pivot_wider(names_from = Stat, values_from = Value)
+}
+
+summary_1000 <- summarize_performance(data_1000) %>% mutate(GeneSize = "1000 genes")
+summary_5000 <- summarize_performance(data_5000) %>% mutate(GeneSize = "5000 genes")
+
+plot_df <- bind_rows(summary_1000, summary_5000)
 
 # Performance metrics plot #
 
-res_10_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_5000.RDS")
-res_20_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_5000.RDS")
-res_40_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_5000.RDS")
-res_100_5000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_5000.RDS")
-
-res_10_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_1000.RDS")
-res_20_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_1000.RDS")
-res_40_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_1000.RDS")
-res_100_1000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_1000.RDS")
-
-res_10_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_10_3000.RDS")
-res_20_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_20_3000.RDS")
-res_40_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_40_3000.RDS")
-res_100_3000 <- readRDS("~/Documents/PhD_AI/CN-aware-DGE/simulations/results/res_performance/res_100_3000.RDS")
-
-data_join_5000 <- rbind(res_10_5000, res_20_5000, res_40_5000, res_100_5000)
-data_join_1000 <- rbind(res_10_1000, res_20_1000, res_40_1000, res_100_1000)
-data_join_3000 <- rbind(res_10_3000, res_20_3000, res_40_3000, res_100_3000)
-
-summary_df <- data_join_5000 %>%
-  group_by(Method, SampleSize) %>%
-  summarize(
-    Precision_Mean = mean(Precision),
-    Precision_SD = sd(Precision),
-    Specificity_Mean = mean(Specificity),
-    Specificity_SD = sd(Specificity),
-    Accuracy_Mean = mean(Accuracy),
-    Accuracy_SD = sd(Accuracy)
-  )
-
-plot_df <- summary_df %>%
-  pivot_longer(
-    cols = c(Precision_Mean, Precision_SD, Specificity_Mean, Specificity_SD, Accuracy_Mean, Accuracy_SD),
-    names_to = c("Metric", "Stat"),
-    names_sep = "_",
-    values_to = "Value"
-  ) %>%
-  pivot_wider(
-    names_from = Stat,
-    values_from = Value
-  )
-
-plot_df_1000 <- plot_df %>%
-  mutate(SampleSize_transformed = case_when(
-    SampleSize == 10 ~ 1,
-    SampleSize == 20 ~ 2,  
-    SampleSize == 40 ~ 3,
-    SampleSize == 100 ~ 4
-  )) %>% 
-  mutate(GeneSize = "1000 genes")
-
-plot_df_5000 <- plot_df %>%
-  mutate(SampleSize_transformed = case_when(
-    SampleSize == 10 ~ 1,
-    SampleSize == 20 ~ 2,  
-    SampleSize == 40 ~ 3,
-    SampleSize == 100 ~ 4
-  )) %>% 
-  mutate(GeneSize = "5000 genes")
-
-plot_df_3000 <- plot_df %>%
-  mutate(SampleSize_transformed = case_when(
-    SampleSize == 10 ~ 1,
-    SampleSize == 20 ~ 2,  
-    SampleSize == 40 ~ 3,
-    SampleSize == 100 ~ 4
-  )) %>% 
-  mutate(GeneSize = "3000 genes")
-
-plot_df <- rbind(plot_df_1000, plot_df_3000, plot_df_5000)
-
-method_colors <- c("PyDESeq2-CN-aware" = "#ED665D", "PyDESeq2-CN-naive" = "#67BF5C", "EdgeR-CN-aware" = "#729ECE", "EdgeR-CN-naive" = "#AD8BC9") 
+method_colors <- c("DeConveil" = "#ED665D", "PyDESeq2" = "#67BF5C", "EdgeR" = "#729ECE", "ABCD-DNA" = "#AD8BC9")
 
 performance_plot <- ggplot(plot_df, aes(x = SampleSize_transformed, y = Mean, color = Method, group = Method)) +
   geom_line(size = 1.4) +
@@ -415,7 +383,7 @@ roc
 
 
 # Radar chart #
-install.packages("fmsb")
+
 library(fmsb)
 library(scales)  # For alpha transparency in colors
 
@@ -443,13 +411,23 @@ data_5000 <- data.frame(
   EdgeR_CN_aware = c(0.871, 0.935, 0.967, 0.99)
 )
 
-transposed <- as.data.frame(t(data_3000[,-1]))
-colnames(transposed) <- data_3000$Sample_Size
-radar_data <- as.data.frame(rbind(
-  Max = rep(1.0, ncol(transposed)),  # Set max grid value to 1
-  Min = rep(0.6, ncol(transposed)),  # Set min grid value to 0.6 (lowest AUC)
-  transposed
-))
+prepare_radar_data <- function(data, min_val = 0.6, max_val = 1.0) {
+  transposed <- as.data.frame(t(data[,-1]))  
+  colnames(transposed) <- data$Sample_Size  
+  
+  # Create radar chart data with min and max limits
+  radar_data <- as.data.frame(rbind(
+    Max = rep(max_val, ncol(transposed)),  
+    Min = rep(min_val, ncol(transposed)),
+    transposed
+  ))
+  return(radar_data)
+}
+
+# Apply the function to all datasets
+radar_data_1000 <- prepare_radar_data(data_1000)
+radar_data_3000 <- prepare_radar_data(data_3000)
+radar_data_5000 <- prepare_radar_data(data_5000)
 
 colors <- c("#0072B2", "#6666FF", "#67BF5C", "#ED665D")
 method_labels <- c("PyDESeq2", "EdgeR-CN-aware", "EdgeR", "DeCNVeil")
@@ -457,29 +435,32 @@ method_labels <- c("PyDESeq2", "EdgeR-CN-aware", "EdgeR", "DeCNVeil")
 create_radarchart <- function(data, color = colors, 
                               vlabels = colnames(data), vlcex = 1.4,
                               caxislabels = c(0.6, 0.7, 0.8, 0.9, 1.0), 
-                              title = "AUC - 3000 genes") {
+                              title = "AUC Plot") {
   radarchart(
     data, axistype = 1,
-    pcol = color,                      # Line color for each method
-    pfcol = alpha(color, 0.1),         # Transparent fill for each polygon
-    plwd = 3,                          # Line width
-    plty = 1,                          # Line type (solid lines)
-    cglcol = "darkgray", cglty = 1,    # Gridline color and type
-    cglwd = 1.0,                       # Gridline width
-    axislabcol = "black",              # Axis label color
-    vlcex = vlcex,                     # Axis label size
-    vlabels = vlabels,                 # Sample size labels at angles
-    caxislabels = caxislabels          # Custom grid labels                     
+    pcol = color,                      
+    pfcol = alpha(color, 0.1),         
+    plwd = 3,                          
+    plty = 1,                          
+    cglcol = "darkgray", cglty = 1,    
+    cglwd = 1.0,                       
+    axislabcol = "black",              
+    vlcex = vlcex,                     
+    vlabels = vlabels,                 
+    caxislabels = caxislabels                           
   )
   title(main = title, font.main = 1, cex.main = 1.4)
 }
 
-vlabels <- c("10  ", "20  ", "40  ", "100  ")
-create_radarchart(radar_data, vlabels = vlabels)
+# Sample size labels
+vlabels <- c("n=10", "n=20", "n=40", "n=100")
+
+# Plot for each radar dataset
+create_radarchart(radar_data_1000, vlabels = vlabels, title = "AUC - 1000 genes")
+create_radarchart(radar_data_3000, vlabels = vlabels, title = "AUC - 3000 genes")
+create_radarchart(radar_data_5000, vlabels = vlabels, title = "AUC - 5000 genes")
+
 
 legend("bottomleft", legend = method_labels, col = colors, 
        lty = 1, lwd = 2, bty = "n", cex = 1.2, 
        title = "Methods")
-
-
-create_radarchart(radar_data)
