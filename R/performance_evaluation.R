@@ -2,81 +2,9 @@ setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
 
 pkgs <- c("tidyverse", "ggplot2", "edgeR", "VennDiagram", "pROC", "PRROC", "grid", "metaseqR2", "caret")
 sapply(pkgs, require, character.only = TRUE)
+source("CN-aware-DGE/R/utils.R")
 
 ### Performance evaluation ###
-
-evaluate_simulation_performance <- function(n_samples, n_genes) {
-  
-  metrics_df <- data.frame()  
-  
-  for (replicate in 1:10) {
-    # Load true labels
-    true_labels_file <- paste0("CN-aware-DGE/simulations/results/replicates_rna_counts_sim/rna_counts_sim_", n_samples, "_", n_genes, "_brca.rds")
-    true_labels <- readRDS(true_labels_file)@variable.annotations$differential.expression
-    
-    # Load prediction results for the current replicate
-    res_naive_pydeseq <- read.csv(paste0("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_naive/", replicate, "_res_CNnaive_", n_samples, "_", n_genes, ".csv"))
-    res_aware_pydeseq <- read.csv(paste0("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_aware/", replicate, "_res_CNaware_", n_samples, "_", n_genes, ".csv"))
-    
-    res_naive_edge <- readRDS(paste0("CN-aware-DGE/simulations/results/replicates_edgeR/cn_naive/", replicate, "_res_CNnaive_", n_samples, "_", n_genes, ".RDS"))
-    res_aware_edge <- readRDS(paste0("CN-aware-DGE/simulations/results/replicates_edgeR/cn_aware/", replicate, "_res_CNaware_", n_samples, "_", n_genes, ".RDS"))
-    
-    # Process results
-    res_naive_pydeseq <- res_naive_pydeseq %>% 
-      dplyr::select(X, log2FoldChange, padj) %>% 
-      remove_rownames %>% 
-      column_to_rownames(var = "X") %>% 
-      dplyr::rename(logFC = log2FoldChange)
-    
-    res_aware_pydeseq <- res_aware_pydeseq %>% 
-      dplyr::select(X, log2FoldChange, padj) %>% 
-      remove_rownames %>% 
-      column_to_rownames(var = "X") %>% 
-      dplyr::rename(logFC = log2FoldChange)
-    
-    res_naive_edge <- res_naive_edge %>% 
-      dplyr::select(logFC, padj) 
-    
-    res_aware_edge <- res_aware_edge %>% 
-      dplyr::select(logFC, padj) 
-    
-    # Binary predictions (padj < 0.05)
-    predicted_naive_pydeseq <- ifelse(res_naive_pydeseq$padj < 0.05, 1, 0)
-    predicted_aware_pydeseq <- ifelse(res_aware_pydeseq$padj < 0.05, 1, 0)
-    predicted_naive_edge <- ifelse(res_naive_edge$padj < 0.05, 1, 0)
-    predicted_aware_edge <- ifelse(res_aware_edge$padj < 0.05, 1, 0)
-    
-    # Replace NA values with 0 in predictions
-    predicted_naive_edge <- ifelse(is.na(predicted_naive_edge), 0, predicted_naive_edge)
-    predicted_aware_edge <- ifelse(is.na(predicted_aware_edge), 0, predicted_aware_edge)
-    
-    # Function to compute performance metrics
-    evaluate_performance <- function(true_labels, predicted_labels) {
-      TP <- sum(true_labels == 1 & predicted_labels == 1)
-      FP <- sum(true_labels == 0 & predicted_labels == 1)
-      TN <- sum(true_labels == 0 & predicted_labels == 0)
-      FN <- sum(true_labels == 1 & predicted_labels == 0)
-      
-      precision <- ifelse((TP + FP) > 0, TP / (TP + FP), NA)
-      specificity <- ifelse((TN + FP) > 0, TN / (TN + FP), NA)
-      accuracy <- ifelse((TP + TN + FP + FN) > 0, (TP + TN) / (TP + TN + FP + FN), 0)
-      
-      return(c(Precision = precision, Specificity = specificity, Accuracy = accuracy))
-    }
-    
-    # Calculate performance metrics for each method and add to metrics_df
-    metrics_df <- rbind(
-      metrics_df,
-      data.frame(Method = "PyDESeq2", t(evaluate_performance(true_labels, predicted_naive_pydeseq)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "DeConveil", t(evaluate_performance(true_labels, predicted_aware_pydeseq)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "EdgeR", t(evaluate_performance(true_labels, predicted_naive_edge)), SampleSize = n_samples, Replicate = replicate),
-      data.frame(Method = "EdgeR-CN-aware", t(evaluate_performance(true_labels, predicted_aware_edge)), SampleSize = n_samples, Replicate = replicate)
-    )
-  }
-  
-  # Return only the metrics_df with performance metrics for each replicate
-  return(metrics_df)
-}
 
 n_genes_list <- c(1000, 3000, 5000)
 n_samples_list <- c(10, 20, 40, 100)
@@ -140,6 +68,7 @@ summary_5000 <- summarize_performance(data_5000) %>% mutate(GeneSize = "5000 gen
 
 plot_df <- bind_rows(summary_1000, summary_5000)
 
+
 # Performance metrics plot #
 
 method_colors <- c("DeConveil" = "#ED665D", "PyDESeq2" = "#67BF5C", "EdgeR" = "#729ECE", "ABCD-DNA" = "#AD8BC9")
@@ -170,197 +99,95 @@ performance_plot
 ggsave("CN-aware-DGE/plots/main/performance_plot.png", dpi = 400, width = 10.0, height = 6.0, plot = performance_plot)    
 
 
-# Results DGE Methods (PyDESeq2, edgeR)
+# Results CN-aware & CN-naive methods
 
-rna_counts_sim_10_3000 <- readRDS("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_10_3000_brca.rds")
-rna_counts_sim_20_3000 <- readRDS("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_20_3000_brca.rds")
-rna_counts_sim_100_3000 <- readRDS("CN-aware-DGE/simulations/results/replicates_rna_counts_sim/rna_counts_sim_100_3000_brca.rds")
+sample_sizes <- c(10, 20, 40, 100)
+gene_counts <- c(1000, 3000, 5000)
 
-res_naive_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_naive/1_res_CNnaive_100_3000.csv")
-res_aware_pydeseq <- read.csv("CN-aware-DGE/simulations/results/replicates_pydeseq/cn_aware/1_res_CNaware_100_3000.csv")
-res_naive_edge <- readRDS("CN-aware-DGE/simulations/results/replicates_edgeR/cn_naive/1_res_CNnaive_100_3000.RDS")
-res_aware_edge <- readRDS("CN-aware-DGE/simulations/results/replicates_edgeR/cn_aware/1_res_CNaware_100_3000.RDS")
+load_rna_counts <- function(sample, gene) {
+  file_path <- paste0("CN-aware-DGE/simulations/results/rna_counts_sim/rna_counts_sim_", sample, "_", gene, "_brca.rds")
+  readRDS(file_path)
+}
 
-true_labels <- rna_counts_sim_100_3000@variable.annotations[["differential.expression"]]
+load_results <- function(method, sample, gene, extension = "csv") {
+  file_dir <- ifelse(grepl("edge", method), "edgeR", "pydeseq")
+  file_name <- paste0("res_", toupper(method), "_", sample, "_", gene, ".", extension)
+  file_path <- paste0("CN-aware-DGE/simulations/results/", file_dir, "/", file_name)
+  
+  if (extension == "csv") {
+    read.csv(file_path)
+  } else {
+    readRDS(file_path)
+  }
+}
 
-res_naive_pydeseq <- res_naive_pydeseq %>% dplyr::select(X,log2FoldChange, padj) %>% 
-  remove_rownames %>% 
-  column_to_rownames(var="X") %>% 
-  dplyr::rename(logFC = log2FoldChange)
+rna_counts_list <- list()
+results_list <- list()
 
-res_aware_pydeseq <- res_aware_pydeseq %>% dplyr::select(X,log2FoldChange, padj) %>% 
-  remove_rownames %>% 
-  column_to_rownames(var="X") %>% 
-  dplyr::rename(logFC = log2FoldChange)
+# Load all combinations of RNA counts and results
+for (gene in gene_counts) {
+  for (sample in sample_sizes) {
+    rna_counts_list[[paste0("rna_", sample, "_", gene)]] <- load_rna_counts(sample, gene)
+    
+    # Load PyDESeq2 (Naive & Aware) results
+    results_list[[paste0("pydeseq_naive_", sample, "_", gene)]] <- load_results("CNnaive", sample, gene, "csv")
+    results_list[[paste0("pydeseq_aware_", sample, "_", gene)]] <- load_results("CNaware", sample, gene, "csv")
+    
+    # Load EdgeR (Naive & Aware) results
+    results_list[[paste0("edge_naive_", sample, "_", gene)]] <- load_results("CNnaive", sample, gene, "RDS")
+    results_list[[paste0("edge_aware_", sample, "_", gene)]] <- load_results("CNaware", sample, gene, "RDS")
+  }
+}
 
-res_naive_edge <- res_naive_edge %>% dplyr::select(logFC, padj) %>% 
-  dplyr::rename(padj = padj)
 
-res_aware_edge <- res_aware_edge %>% dplyr::select(logFC, padj) %>% 
-  dplyr::rename(padj = padj)
+process_results_pydeseq <- function(df) {
+  df %>%
+    dplyr::select(X, log2FoldChange, padj) %>%
+    remove_rownames() %>%
+    column_to_rownames(var = "X") %>%
+    dplyr::rename(logFC = log2FoldChange) %>%
+    na.omit()
+}
 
-#common_genes <- intersect(rownames(res_aware_pydeseq), rownames(res_aware_edge))
-#res_aware_pydeseq <- res_aware_pydeseq[common_genes, ] %>% data.frame()
-#res_naive_pydeseq <- res_naive_pydeseq[common_genes, ] %>% data.frame()
+process_results_edge <- function(df) {
+  df %>%
+    dplyr::select(logFC, FDR) %>%
+    dplyr::rename(padj = FDR) %>%
+    na.omit()
+}
+
+res_naive_pydeseq <- process_results_pydeseq(results_list[["pydeseq_naive_10_1000"]])
+res_naive_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
+
+res_aware_pydeseq <- process_results_pydeseq(results_list[["pydeseq_aware_10_1000"]])
+res_aware_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
+
+true_labels <- rna_counts_list[["rna_10_1000"]]@variable.annotations[["differential.expression"]]
 
 rownames_idx <- match(rownames(res_aware_pydeseq), rownames(res_aware_edge))
 res_aware_edge <- res_aware_edge[rownames_idx,] %>% na.omit()
 res_naive_edge <- res_naive_edge[rownames_idx,] %>% na.omit()
 
-# ROC curve calculation
-true_labels <- rna_counts_sim_100_3000@variable.annotations[["differential.expression"]]
-#true_labels_cleaned <- true_labels[1:4999]
 
+# ROC curve calculation
+true_labels <- rna_counts_list[["rna_10_1000"]]@variable.annotations[["differential.expression"]]
 
 # AUROC plot
 
-# Use metaseqR2 package #
 p1 <- as.data.frame(res_naive_pydeseq$padj)
 p2 <- as.data.frame(res_naive_edge$padj)
 p3 <- as.data.frame(res_aware_edge$padj)
 p4 <- as.data.frame(res_aware_pydeseq$padj)
 
 
-p1 <- p1[1:2995,]
-p2 <- p2[1:2995,]
-p3 <- p3[1:2995,]
-p4 <- p4[1:2995,]
+p1 <- p1[1:4993,]
+p2 <- p2[1:4993,]
+p3 <- p3[1:4993,]
+p4 <- p4[1:4993,]
 
 p_values <- cbind(p1, p2, p3, p4)
-colnames(p_values) <- c("PyDESeq-CN-naive", "EdgeR-CN-naive", "EdgeR-CN-aware", "PyDESeq-CN-aware")
+colnames(p_values) <- c("PyDESeq2", "EdgeR", "ABCD-DNA", "DeConveil")
 
-
-diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "screen",
-                        path = NULL, draw = TRUE, line_colors = NULL, line_width = 1.5, 
-                        plot_title = NULL, axis_text_size = 1.2, legend_text_size = 1.0, 
-                        title_text_size = 1.5, margin = c(5, 5, 5, 5), ...) {
-  
-  # Validate x and y arguments
-  valid_metrics <- c("fpr", "fnr", "tpr", "tnr", "scrx", "sens", "spec")
-  if (!(x %in% valid_metrics)) {
-    stop("Invalid x-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
-  }
-  if (!(y %in% valid_metrics)) {
-    stop("Invalid y-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
-  }
-  
-  # Convert p to matrix if needed
-  if (is.list(p)) {
-    pmat <- do.call("cbind", p)
-  } else if (is.data.frame(p)) {
-    pmat <- as.matrix(p)
-  } else if (is.matrix(p)) {
-    pmat <- p
-  }
-  
-  if (is.null(colnames(pmat))) colnames(pmat) <- paste("p", seq_len(ncol(pmat)), sep = "_")
-  
-  # Axis names for labeling
-  axName <- list(
-    tpr = "True Positive Rate",
-    tnr = "True Negative Rate",
-    fpr = "False Positive Rate",
-    fnr = "False Negative Rate",
-    scrx = "Ratio of selected",
-    scry = "Normalized TP/(FP+FN)",
-    sens = "Sensitivity",
-    spec = "1 - Specificity"
-  )
-  
-  ROC <- vector("list", ncol(pmat))
-  names(ROC) <- colnames(pmat)
-  
-  # Set line colors
-  if (!is.null(line_colors) && length(line_colors) >= ncol(pmat)) {
-    colspace <- line_colors[seq_len(ncol(pmat))]
-  } else {
-    colspaceUniverse <- c("red", "blue", "green", "orange", "darkgrey", "green4",
-                          "black", "pink", "brown", "magenta", "yellowgreen", "pink4", "seagreen4", "darkcyan")
-    colspace <- colspaceUniverse[seq_len(ncol(pmat))]
-  }
-  names(colspace) <- colnames(pmat)
-  
-  # ROC calculation
-  eps <- min(pmat[!is.na(pmat) & pmat > 0])
-  for (n in colnames(pmat)) {
-    gg <- which(pmat[, n] <= sig)
-    psample <- -log10(pmax(pmat[gg, n], eps))
-    size <- seq(1, length(gg))
-    cuts <- seq(-log10(sig), max(psample), length.out = length(gg))
-    local.truth <- truth[gg]
-    
-    S <- length(size)
-    TP <- FP <- FN <- TN <- FPR <- FNR <- TPR <- TNR <- SENS <- SPEC <- SCRX <- SCRY <- numeric(S)
-    
-    for (i in seq_len(S)) {
-      TP[i] <- length(which(psample > cuts[i] & local.truth != 0))
-      FP[i] <- length(which(psample > cuts[i] & local.truth == 0))
-      FN[i] <- length(which(psample < cuts[i] & local.truth != 0))
-      TN[i] <- length(which(psample < cuts[i] & local.truth == 0))
-      SCRX[i] <- i / S
-      SCRY[i] <- TP[i] / (FN[i] + FP[i])
-      
-      FPR[i] <- if (FP[i] + TN[i] == 0) 0 else FP[i] / (FP[i] + TN[i])
-      FNR[i] <- FN[i] / (TP[i] + FN[i])
-      TPR[i] <- TP[i] / (TP[i] + FN[i])
-      TNR[i] <- if (TN[i] + FP[i] == 0) 0 else TN[i] / (TN[i] + FP[i])
-      SENS[i] <- TPR[i]
-      SPEC[i] <- 1 - TNR[i]
-    }
-    
-    ROC[[n]] <- list(TP = TP, FP = FP, FN = FN, TN = TN,
-                     FPR = FPR, FNR = FNR, TPR = TPR, TNR = TNR,
-                     SCRX = SCRX, SCRY = SCRY / max(SCRY),
-                     SENS = SENS, SPEC = SPEC, AUC = NULL)
-  }
-  
-  # AUC calculation
-  for (n in colnames(pmat)) {
-    auc <- 0
-    for (i in 2:length(ROC[[n]][[toupper(y)]])) {
-      auc <- auc + 0.5 * (ROC[[n]][[toupper(x)]][i] - ROC[[n]][[toupper(x)]][i - 1]) *
-        (ROC[[n]][[toupper(y)]][i] + ROC[[n]][[toupper(y)]][i - 1])
-    }
-    ROC[[n]]$AUC <- abs(auc)
-    if (ROC[[n]]$AUC == 0) ROC[[n]]$AUC <- sample(seq(0.95, 0.99, by = 0.001), 1)
-  }
-  
-  # Plotting
-  if (draw) {
-    if (output == "file" && !is.null(path)) {
-      png(filename = path, width = 800, height = 800, res = 100)  # Start PNG device
-    }
-    
-    xlim <- c(0, 1)
-    ylim <- c(0, 1)
-    par(mar = margin, cex.axis = axis_text_size, cex.main = title_text_size, 
-        cex.lab = axis_text_size, font.lab = 1, font.axis = 1, pty = "m")
-    plot.new()
-    plot.window(xlim, ylim)
-    axis(1, at = pretty(xlim, 10))
-    axis(2, at = pretty(ylim, 10))
-    
-    for (n in names(ROC)) {
-      lines(ROC[[n]][[toupper(x)]], ROC[[n]][[toupper(y)]], col = colspace[n], lwd = line_width, ...)
-    }
-    
-    grid()
-    
-    # Title with plain font
-    title(main = plot_title, xlab = axName[[x]], ylab = axName[[y]], font.main = 1)
-    aucText <- vapply(ROC, function(x) round(x$AUC, digits = 3), numeric(1))
-    
-    # Legend with customizable text size
-    legend("bottomright", col = colspace, lty = 1, cex = legend_text_size,
-           legend = paste(names(ROC), " (AUC = ", aucText, ")", sep = ""))
-    
-    if (output == "file" && !is.null(path)) {
-      dev.off()  # Close the PNG device
-    }
-  }
-  
-  return(list(ROC = ROC, truth = truth, sigLevel = sig, xAxis = x, yAxis = y, path = path))
-}
 
 roc <- diagplotRoc(
   truth = true_labels, 
@@ -369,20 +196,20 @@ roc <- diagplotRoc(
   x = "fpr", 
   y = "tpr", 
   output = "file", 
-  line_colors = c("#729ECE", "#AD8BC9", "#67BF5C", "#ED665D"),
+  line_colors = c("#67BF5C", "#AD8BC9", "#729ECE", "#ED665D"),
   line_width = 6,
-  plot_title = "Sample size: 100; Genes: 3000",
+  plot_title = "Sample size: 100; Genes: 5000",
   axis_text_size = 2.0,
   legend_text_size = 1.6,
   font.main = 1,
   title_text_size = 2.4, 
   margin = c(6, 6, 6, 5),
-  path = "CN-aware-DGE/plots/main/roc_100_3000.png"
+  path = "CN-aware-DGE/plots/supplementary/roc_100_5000.png"
 )
 roc
 
 
-# Radar chart #
+# Radar chart - plot AUC values across methods #
 
 library(fmsb)
 library(scales)  # For alpha transparency in colors
