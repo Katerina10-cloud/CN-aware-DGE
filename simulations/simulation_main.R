@@ -130,10 +130,24 @@ generate_and_save_simulations <- function(n_samples, n_genes, num_replicates) {
   }
 }
 
-#n_samples <- 100 # 20, 40
-#n_genes <- 1000 # 3000, 5000
 
-generate_and_save_simulations(n_samples = 100, n_genes = 3000, num_replicates = 10)
+sample_sizes <- c(10, 20, 40, 100)   
+gene_settings <- c(1000, 3000, 5000) 
+num_replicates <- 10    
+
+for (n_samples in sample_sizes) {
+  for (n_genes in gene_settings) {
+    message(sprintf("Running simulation for %d samples and %d genes...", n_samples, n_genes))
+    tryCatch({
+      generate_and_save_simulations(n_samples = n_samples, n_genes = n_genes, num_replicates = num_replicates)
+      message(sprintf("Simulation completed for %d samples and %d genes.", n_samples, n_genes))
+    }, error = function(e) {
+      message(sprintf("Error encountered for %d samples and %d genes: %s", n_samples, n_genes, e$message))
+    })
+  }
+}
+
+
 
 
 # Sampling of Copy Number data #

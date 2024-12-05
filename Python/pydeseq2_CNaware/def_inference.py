@@ -43,8 +43,8 @@ class DefInference(inference.Inference):
         Joblib backend.
     """
     
-    fit_rough_dispersions = staticmethod(utils_pydeseq2CN.fit_rough_dispersions)  # type: ignore
-    fit_moments_dispersions2 = staticmethod(utils_pydeseq2CN.fit_moments_dispersions2)  # type: ignore
+    fit_rough_dispersions = staticmethod(utils_CNaware.fit_rough_dispersions)  # type: ignore
+    fit_moments_dispersions2 = staticmethod(utils_CNaware.fit_moments_dispersions2)  # type: ignore
     
     def __init__(
         self,
@@ -80,7 +80,7 @@ class DefInference(inference.Inference):
                     verbose=self._joblib_verbosity,
                     batch_size=self._batch_size,
                 )(
-                    delayed(utils_pydeseq2CN.fit_lin_mu)(
+                    delayed(utils_CNaware.fit_lin_mu)(
                         counts=counts[:, i],
                         size_factors=size_factors,
                         design_matrix=design_matrix,
@@ -111,7 +111,7 @@ class DefInference(inference.Inference):
                 verbose=self._joblib_verbosity,
                 batch_size=self._batch_size,
             )(
-                delayed(utils_pydeseq2CN.irls_glm)(
+                delayed(utils_CNaware.irls_glm)(
                     counts=counts[:, i],
                     size_factors=size_factors,
                     design_matrix=design_matrix,
@@ -263,7 +263,7 @@ class DefInference(inference.Inference):
                 verbose=self._joblib_verbosity,
                 batch_size=self._batch_size,
             )(
-                delayed(utils_pydeseq2CN.nbinomGLM)(
+                delayed(utils_CNaware.nbinomGLM)(
                     design_matrix=design_matrix,
                     counts=counts[:, i],
                     cnv=cnv[:, i],

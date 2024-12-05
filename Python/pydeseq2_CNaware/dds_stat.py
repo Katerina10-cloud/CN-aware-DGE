@@ -546,11 +546,12 @@ class pydeseq2CN_Stats:
         
         if self.dds.refit_cooks and self.dds.varm["refitted"].sum() > 0:
             cooks_layer = self.dds.layers["replace_cooks"]
+            filtered_cooks_layer = cooks_layer.loc[use_for_max, :] 
+            
         else:
             cooks_layer = self.dds.layers["cooks"]
+            filtered_cooks_layer = cooks_layer[use_for_max, :] 
 
-        filtered_cooks_layer = cooks_layer.loc[use_for_max, :]  
-        #filtered_cooks_layer = cooks_layer[use_for_max, :] 
         cooks_outlier = (filtered_cooks_layer > cooks_cutoff).any(axis=0).copy()
         
         # Find the position of the maximum cooks distance for each outlier gene

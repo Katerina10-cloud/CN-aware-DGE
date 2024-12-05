@@ -4,7 +4,7 @@ pkgs <- c("tidyverse", "ggplot2", "edgeR", "VennDiagram", "pROC", "PRROC", "grid
 sapply(pkgs, require, character.only = TRUE)
 source("CN-aware-DGE/R/utils.R")
 
-### Performance evaluation ###
+### Performance evaluation: Accuracy | Precision | Specificity ###
 
 n_genes_list <- c(1000, 3000, 5000)
 n_samples_list <- c(10, 20, 40, 100)
@@ -45,6 +45,7 @@ data_1000 <- rename_methods(data_1000)
 data_5000 <- rename_methods(data_5000)
 
 # Combine and summarize the data
+
 summarize_performance <- function(data) {
   data %>%
     group_by(Method, SampleSize) %>%
@@ -99,7 +100,7 @@ performance_plot
 ggsave("CN-aware-DGE/plots/main/performance_plot.png", dpi = 400, width = 10.0, height = 6.0, plot = performance_plot)    
 
 
-# Results CN-aware & CN-naive methods
+# Load and process Results CN-aware & CN-naive methods
 
 sample_sizes <- c(10, 20, 40, 100)
 gene_counts <- c(1000, 3000, 5000)
@@ -113,7 +114,6 @@ load_results <- function(method, sample, gene, extension = "csv") {
   file_dir <- ifelse(grepl("edge", method), "edgeR", "pydeseq")
   file_name <- paste0("res_", toupper(method), "_", sample, "_", gene, ".", extension)
   file_path <- paste0("CN-aware-DGE/simulations/results/", file_dir, "/", file_name)
-  
   if (extension == "csv") {
     read.csv(file_path)
   } else {
@@ -121,10 +121,10 @@ load_results <- function(method, sample, gene, extension = "csv") {
   }
 }
 
+
 rna_counts_list <- list()
 results_list <- list()
 
-# Load all combinations of RNA counts and results
 for (gene in gene_counts) {
   for (sample in sample_sizes) {
     rna_counts_list[[paste0("rna_", sample, "_", gene)]] <- load_rna_counts(sample, gene)
@@ -156,38 +156,45 @@ process_results_edge <- function(df) {
     na.omit()
 }
 
+
 res_naive_pydeseq <- process_results_pydeseq(results_list[["pydeseq_naive_10_1000"]])
 res_naive_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
 
 res_aware_pydeseq <- process_results_pydeseq(results_list[["pydeseq_aware_10_1000"]])
 res_aware_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
 
-true_labels <- rna_counts_list[["rna_10_1000"]]@variable.annotations[["differential.expression"]]
-
 rownames_idx <- match(rownames(res_aware_pydeseq), rownames(res_aware_edge))
 res_aware_edge <- res_aware_edge[rownames_idx,] %>% na.omit()
 res_naive_edge <- res_naive_edge[rownames_idx,] %>% na.omit()
 
 
-# ROC curve calculation
+## AUROC calculation ##
 true_labels <- rna_counts_list[["rna_10_1000"]]@variable.annotations[["differential.expression"]]
-
-# AUROC plot
+names(true_labels) <- rownames(rna_counts_list[["rna_10_1000"]]@count.matrix)
 
 p1 <- as.data.frame(res_naive_pydeseq$padj)
+rownames(p1) <- rownames(res_naive_pydeseq)
 p2 <- as.data.frame(res_naive_edge$padj)
+rownames(p2) <- rownames(res_naive_edge)
 p3 <- as.data.frame(res_aware_edge$padj)
+rownames(p3) <- rownames(res_aware_edge)
 p4 <- as.data.frame(res_aware_pydeseq$padj)
+rownames(p4) <- rownames(res_aware_pydeseq)
 
+common_genes <- Reduce(intersect, list(rownames(p1), rownames(p2), rownames(p3), rownames(p4)))
+true_labels <- true_labels[common_genes]
 
-p1 <- p1[1:4993,]
-p2 <- p2[1:4993,]
-p3 <- p3[1:4993,]
-p4 <- p4[1:4993,]
+p1 <- as.data.frame(p1[common_genes,]) 
+p2 <- as.data.frame(p2[common_genes,]) 
+p3 <- as.data.frame(p3[common_genes,]) 
+p4 <- as.data.frame(p4[common_genes,]) 
 
 p_values <- cbind(p1, p2, p3, p4)
+rownames(p_values) <- names(true_labels)
 colnames(p_values) <- c("PyDESeq2", "EdgeR", "ABCD-DNA", "DeConveil")
 
+
+# AUROC plot
 
 roc <- diagplotRoc(
   truth = true_labels, 
@@ -198,96 +205,14 @@ roc <- diagplotRoc(
   output = "file", 
   line_colors = c("#67BF5C", "#AD8BC9", "#729ECE", "#ED665D"),
   line_width = 6,
-  plot_title = "Sample size: 100; Genes: 5000",
+  plot_title = "Sample size: 10; Genes: 1000",
   axis_text_size = 2.0,
   legend_text_size = 1.6,
   font.main = 1,
   title_text_size = 2.4, 
   margin = c(6, 6, 6, 5),
-  path = "CN-aware-DGE/plots/supplementary/roc_100_5000.png"
+  path = "CN-aware-DGE/plots/supplementary/roc_10_1000.png"
 )
 roc
 
 
-# Radar chart - plot AUC values across methods #
-
-library(fmsb)
-library(scales)  # For alpha transparency in colors
-
-data_1000 <- data.frame(
-  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
-  PyDESeq2 = c(0.779, 0.774, 0.78, 0.916),
-  DeCNVeil = c(0.836, 0.904, 0.98, 0.988),
-  EdgeR = c(0.735, 0.796, 0.80, 0.915),
-  EdgeR_CN_aware = c(0.848, 0.904, 0.979, 0.982)
-  )
-
-data_3000 <- data.frame(
-  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
-  PyDESeq2 = c(0.774, 0.812, 0.819, 0.902),
-  DeCNVeil = c(0.867, 0.936, 0.971, 0.991),
-  EdgeR = c(0.762, 0.822, 0.835, 0.901),
-  EdgeR_CN_aware = c(0.855, 0.929, 0.966, 0.989)
-)
-
-data_5000 <- data.frame(
-  Sample_Size = c("10 samples", "20 samples", "40 samples", "100 samples"),
-  PyDESeq2 = c(0.76, 0.809, 0.824, 0.897),
-  DeCNVeil = c(0.87, 0.935, 0.97, 0.993),
-  EdgeR = c(0.767, 0.80, 0.834, 0.908),
-  EdgeR_CN_aware = c(0.871, 0.935, 0.967, 0.99)
-)
-
-prepare_radar_data <- function(data, min_val = 0.6, max_val = 1.0) {
-  transposed <- as.data.frame(t(data[,-1]))  
-  colnames(transposed) <- data$Sample_Size  
-  
-  # Create radar chart data with min and max limits
-  radar_data <- as.data.frame(rbind(
-    Max = rep(max_val, ncol(transposed)),  
-    Min = rep(min_val, ncol(transposed)),
-    transposed
-  ))
-  return(radar_data)
-}
-
-# Apply the function to all datasets
-radar_data_1000 <- prepare_radar_data(data_1000)
-radar_data_3000 <- prepare_radar_data(data_3000)
-radar_data_5000 <- prepare_radar_data(data_5000)
-
-colors <- c("#0072B2", "#6666FF", "#67BF5C", "#ED665D")
-method_labels <- c("PyDESeq2", "EdgeR-CN-aware", "EdgeR", "DeCNVeil")
-
-create_radarchart <- function(data, color = colors, 
-                              vlabels = colnames(data), vlcex = 1.4,
-                              caxislabels = c(0.6, 0.7, 0.8, 0.9, 1.0), 
-                              title = "AUC Plot") {
-  radarchart(
-    data, axistype = 1,
-    pcol = color,                      
-    pfcol = alpha(color, 0.1),         
-    plwd = 3,                          
-    plty = 1,                          
-    cglcol = "darkgray", cglty = 1,    
-    cglwd = 1.0,                       
-    axislabcol = "black",              
-    vlcex = vlcex,                     
-    vlabels = vlabels,                 
-    caxislabels = caxislabels                           
-  )
-  title(main = title, font.main = 1, cex.main = 1.4)
-}
-
-# Sample size labels
-vlabels <- c("n=10", "n=20", "n=40", "n=100")
-
-# Plot for each radar dataset
-create_radarchart(radar_data_1000, vlabels = vlabels, title = "AUC - 1000 genes")
-create_radarchart(radar_data_3000, vlabels = vlabels, title = "AUC - 3000 genes")
-create_radarchart(radar_data_5000, vlabels = vlabels, title = "AUC - 5000 genes")
-
-
-legend("bottomleft", legend = method_labels, col = colors, 
-       lty = 1, lwd = 2, bty = "n", cex = 1.2, 
-       title = "Methods")

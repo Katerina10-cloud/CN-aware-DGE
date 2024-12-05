@@ -231,12 +231,8 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
   
   # Validate x and y arguments
   valid_metrics <- c("fpr", "fnr", "tpr", "tnr", "scrx", "sens", "spec")
-  if (!(x %in% valid_metrics)) {
-    stop("Invalid x-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
-  }
-  if (!(y %in% valid_metrics)) {
-    stop("Invalid y-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
-  }
+  if (!(x %in% valid_metrics)) stop("Invalid x-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
+  if (!(y %in% valid_metrics)) stop("Invalid y-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
   
   # Convert p to matrix if needed
   if (is.list(p)) {
@@ -249,7 +245,6 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
   
   if (is.null(colnames(pmat))) colnames(pmat) <- paste("p", seq_len(ncol(pmat)), sep = "_")
   
-  # Axis names for labeling
   axName <- list(
     tpr = "True Positive Rate",
     tnr = "True Negative Rate",
@@ -274,8 +269,10 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
   }
   names(colspace) <- colnames(pmat)
   
-  # ROC calculation
   eps <- min(pmat[!is.na(pmat) & pmat > 0])
+  
+  AUC_values <- numeric(ncol(pmat))
+  
   for (n in colnames(pmat)) {
     gg <- which(pmat[, n] <= sig)
     psample <- -log10(pmax(pmat[gg, n], eps))
@@ -293,7 +290,6 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
       TN[i] <- length(which(psample < cuts[i] & local.truth == 0))
       SCRX[i] <- i / S
       SCRY[i] <- TP[i] / (FN[i] + FP[i])
-      
       FPR[i] <- if (FP[i] + TN[i] == 0) 0 else FP[i] / (FP[i] + TN[i])
       FNR[i] <- FN[i] / (TP[i] + FN[i])
       TPR[i] <- TP[i] / (TP[i] + FN[i])
@@ -302,29 +298,23 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
       SPEC[i] <- 1 - TNR[i]
     }
     
-    ROC[[n]] <- list(TP = TP, FP = FP, FN = FN, TN = TN,
-                     FPR = FPR, FNR = FNR, TPR = TPR, TNR = TNR,
-                     SCRX = SCRX, SCRY = SCRY / max(SCRY),
+    ROC[[n]] <- list(TP = TP, FP = FP, FN = FN, TN = TN, FPR = FPR, FNR = FNR, 
+                     TPR = TPR, TNR = TNR, SCRX = SCRX, SCRY = SCRY / max(SCRY), 
                      SENS = SENS, SPEC = SPEC, AUC = NULL)
-  }
-  
-  # AUC calculation
-  for (n in colnames(pmat)) {
+    
     auc <- 0
     for (i in 2:length(ROC[[n]][[toupper(y)]])) {
       auc <- auc + 0.5 * (ROC[[n]][[toupper(x)]][i] - ROC[[n]][[toupper(x)]][i - 1]) *
         (ROC[[n]][[toupper(y)]][i] + ROC[[n]][[toupper(y)]][i - 1])
     }
     ROC[[n]]$AUC <- abs(auc)
-    if (ROC[[n]]$AUC == 0) ROC[[n]]$AUC <- sample(seq(0.95, 0.99, by = 0.001), 1)
+    AUC_values[n] <- abs(auc)
   }
   
-  # Plotting
   if (draw) {
     if (output == "file" && !is.null(path)) {
-      png(filename = path, width = 800, height = 800, res = 100)  # Start PNG device
+      png(filename = path, width = 800, height = 800, res = 100)
     }
-    
     xlim <- c(0, 1)
     ylim <- c(0, 1)
     par(mar = margin, cex.axis = axis_text_size, cex.main = title_text_size, 
@@ -339,21 +329,84 @@ diagplotRoc <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr", output = "sc
     }
     
     grid()
-    
-    # Title with plain font
     title(main = plot_title, xlab = axName[[x]], ylab = axName[[y]], font.main = 1)
     aucText <- vapply(ROC, function(x) round(x$AUC, digits = 3), numeric(1))
-    
-    # Legend with customizable text size
     legend("bottomright", col = colspace, lty = 1, cex = legend_text_size,
            legend = paste(names(ROC), " (AUC = ", aucText, ")", sep = ""))
     
     if (output == "file" && !is.null(path)) {
-      dev.off()  # Close the PNG device
+      dev.off()
     }
   }
   
-  return(list(ROC = ROC, truth = truth, sigLevel = sig, xAxis = x, yAxis = y, path = path))
+  return(list(ROC = ROC, AUC_values = AUC_values, truth = truth, sigLevel = sig, xAxis = x, yAxis = y, path = path))
+}
+
+
+auROC <- function(truth, p, sig = 0.05, x = "fpr", y = "tpr") {
+  
+  # Validate x and y arguments
+  valid_metrics <- c("fpr", "fnr", "tpr", "tnr", "scrx", "sens", "spec")
+  if (!(x %in% valid_metrics)) stop("Invalid x-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
+  if (!(y %in% valid_metrics)) stop("Invalid y-axis metric. Choose from: ", paste(valid_metrics, collapse = ", "))
+  
+  # Convert p to matrix if needed
+  if (is.list(p)) {
+    pmat <- do.call("cbind", p)
+  } else if (is.data.frame(p)) {
+    pmat <- as.matrix(p)
+  } else if (is.matrix(p)) {
+    pmat <- p
+  }
+  
+  if (is.null(colnames(pmat))) colnames(pmat) <- paste("p", seq_len(ncol(pmat)), sep = "_")
+  
+  ROC <- vector("list", ncol(pmat))
+  names(ROC) <- colnames(pmat)
+  
+  eps <- min(pmat[!is.na(pmat) & pmat > 0])
+  
+  AUC_values <- numeric(ncol(pmat))
+  
+  for (n in colnames(pmat)) {
+    gg <- which(pmat[, n] <= sig)
+    psample <- -log10(pmax(pmat[gg, n], eps))
+    size <- seq(1, length(gg))
+    cuts <- seq(-log10(sig), max(psample), length.out = length(gg))
+    local.truth <- truth[gg]
+    
+    S <- length(size)
+    TP <- FP <- FN <- TN <- FPR <- FNR <- TPR <- TNR <- SENS <- SPEC <- SCRX <- SCRY <- numeric(S)
+    
+    for (i in seq_len(S)) {
+      TP[i] <- length(which(psample > cuts[i] & local.truth != 0))
+      FP[i] <- length(which(psample > cuts[i] & local.truth == 0))
+      FN[i] <- length(which(psample < cuts[i] & local.truth != 0))
+      TN[i] <- length(which(psample < cuts[i] & local.truth == 0))
+      SCRX[i] <- i / S
+      SCRY[i] <- TP[i] / (FN[i] + FP[i])
+      FPR[i] <- if (FP[i] + TN[i] == 0) 0 else FP[i] / (FP[i] + TN[i])
+      FNR[i] <- FN[i] / (TP[i] + FN[i])
+      TPR[i] <- TP[i] / (TP[i] + FN[i])
+      TNR[i] <- if (TN[i] + FP[i] == 0) 0 else TN[i] / (TN[i] + FP[i])
+      SENS[i] <- TPR[i]
+      SPEC[i] <- 1 - TNR[i]
+    }
+    
+    ROC[[n]] <- list(TP = TP, FP = FP, FN = FN, TN = TN, FPR = FPR, FNR = FNR, 
+                     TPR = TPR, TNR = TNR, SCRX = SCRX, SCRY = SCRY / max(SCRY), 
+                     SENS = SENS, SPEC = SPEC, AUC = NULL)
+    
+    auc <- 0
+    for (i in 2:length(ROC[[n]][[toupper(y)]])) {
+      auc <- auc + 0.5 * (ROC[[n]][[toupper(x)]][i] - ROC[[n]][[toupper(x)]][i - 1]) *
+        (ROC[[n]][[toupper(y)]][i] + ROC[[n]][[toupper(y)]][i - 1])
+    }
+    ROC[[n]]$AUC <- abs(auc)
+    AUC_values[n] <- abs(auc)
+  }
+  
+  return(list(ROC = ROC, AUC_values = AUC_values))
 }
 
 

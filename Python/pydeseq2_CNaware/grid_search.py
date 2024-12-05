@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 from scipy.special import gammaln  # type: ignore
 
-import utils_pydeseq2CN
+import utils_CNaware
 
 
 def grid_fit_beta(
