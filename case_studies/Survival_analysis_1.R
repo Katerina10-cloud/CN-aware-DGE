@@ -145,7 +145,7 @@ surv_fit <- survfit(Surv(time, event) ~ risk_group, data = clinical)
 
 
 surv_plot <- ggsurvplot(surv_fit, data = clinical, pval = TRUE, 
-           conf.int = F, risk.table = TRUE, palette = c("#AD002AB2", "#00468BB2"),  
+           conf.int = F, risk.table = TRUE, palette = c("#DD2A7B", "#515BD4"),  
            title = "",  xlab = "Time (days)",  ylab = "Survival Probability",
            font.main = c(16, "bold", "black"),  
            font.x = c(16, "plain"),  
@@ -177,7 +177,7 @@ surv_plot$table <- surv_plot$table +
     strip.text = element_text(size = 14, face = "plain"))
 surv_plot
 
-
+#ggsave("CN-aware-DGE/case_studies/plots/brca/KM_survival.png", dpi = 400, width = 5.0, height = 10.0, plot = surv_plot)
 
 # Forest plot of univariate Cox proportional hazards regression analysis 
 sel_genes_data <- significant_genes %>% dplyr::filter(Gene %in% c(selected_genes))
@@ -190,7 +190,7 @@ table_text <- cbind(
 colnames(table_text) <- c("", "Hazard ratio", "p_value")
 table_text <- table_text[2:10,]
 
-box_colors <- ifelse(sel_genes_data$HR > 1, "darkred", "darkblue")
+box_colors <- ifelse(sel_genes_data$HR > 1, "deeppink4", "blue3")
 
 forestplot(
   labeltext = table_text, 
@@ -226,17 +226,17 @@ plot_data <- sel_genes_data %>%
   mutate(
     gene = factor(Gene, levels = rev(Gene)),  # Reversing for top-to-bottom order
     is_summary = FALSE, # Summary flag for first row
-    box_color = ifelse(HR > 1, "darkred", "darkblue")  # Color based on HR values
+    box_color = ifelse(HR > 1, "#D60C00FF", "blue3")  # Color based on HR values
   )
 
 plot_data$is_summary[1] <- TRUE
 
 library(RColorBrewer)
-custom_colors <- c("category1" = "darkred", "category2" = "darkblue")
+custom_colors <- c("category1" = "#D60C00FF", "category2" = "blue3")
 
 forest_plot <- ggplot(plot_data, aes(x = HR, y = gene)) +
   geom_pointrange(aes(xmin = CI_lower, xmax = CI_upper, color = box_color), 
-                  size = 0.5, show.legend = FALSE) +
+                  size = 0.9, show.legend = TRUE) +
   #geom_point(data = subset(plot_data, is_summary == TRUE), aes(x = HR), 
              #shape = 23, fill = "royalblue", color = "royalblue", size = 3) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "black") +

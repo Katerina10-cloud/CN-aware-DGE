@@ -110,35 +110,52 @@ load_rna_counts <- function(sample, gene) {
   readRDS(file_path)
 }
 
-load_results <- function(method, sample, gene, extension = "csv") {
-  file_dir <- ifelse(grepl("edge", method), "edgeR", "pydeseq")
-  file_name <- paste0("res_", toupper(method), "_", sample, "_", gene, ".", extension)
-  file_path <- paste0("CN-aware-DGE/simulations/results/", file_dir, "/", file_name)
-  if (extension == "csv") {
-    read.csv(file_path)
+load_results <- function(method, sample, gene) {
+  file_dir <- if (grepl("edge", method, ignore.case = TRUE)) {
+    "edgeR"
   } else {
-    readRDS(file_path)
+    "pydeseq"
+  }
+  extension <- ifelse(file_dir == "edgeR", "RDS", "csv")
+  clean_method <- sub("_edge", "", method)  # Remove _edge suffix if used
+  file_name <- paste0("res_", clean_method, "_", sample, "_", gene, ".", extension)
+  file_path <- paste0("CN-aware-DGE/simulations/results/", file_dir, "/", file_name)
+  if (file.exists(file_path)) {
+    message(paste("Loading", method, "results from:", file_path))
+    if (extension == "csv") {
+      return(read.csv(file_path))
+    } else {
+      return(readRDS(file_path))
+    }
+  } else {
+    warning(paste("Results file not found:", file_path))
+    return(NULL)
   }
 }
-
 
 rna_counts_list <- list()
 results_list <- list()
 
 for (gene in gene_counts) {
   for (sample in sample_sizes) {
-    rna_counts_list[[paste0("rna_", sample, "_", gene)]] <- load_rna_counts(sample, gene)
     
-    # Load PyDESeq2 (Naive & Aware) results
-    results_list[[paste0("pydeseq_naive_", sample, "_", gene)]] <- load_results("CNnaive", sample, gene, "csv")
-    results_list[[paste0("pydeseq_aware_", sample, "_", gene)]] <- load_results("CNaware", sample, gene, "csv")
+    # Load RNA Counts
+    rna_key <- paste0("rna_", sample, "_", gene)
+    rna_counts_list[[rna_key]] <- load_rna_counts(sample, gene)
     
-    # Load EdgeR (Naive & Aware) results
-    results_list[[paste0("edge_naive_", sample, "_", gene)]] <- load_results("CNnaive", sample, gene, "RDS")
-    results_list[[paste0("edge_aware_", sample, "_", gene)]] <- load_results("CNaware", sample, gene, "RDS")
+    # PyDESeq2 Results (Naive & Aware)
+    results_list[[paste0("pydeseq_naive_", sample, "_", gene)]] <- load_results("CNnaive", sample, gene)
+    results_list[[paste0("pydeseq_aware_", sample, "_", gene)]] <- load_results("CNaware", sample, gene)
+    
+    # EdgeR Results (Naive & Aware)
+    results_list[[paste0("edge_naive_", sample, "_", gene)]] <- load_results("CNnaive_edge", sample, gene)
+    results_list[[paste0("edge_aware_", sample, "_", gene)]] <- load_results("CNaware_edge", sample, gene)
   }
 }
 
+colnames(results_list[["edge_aware_100_1000"]])[colnames(results_list[["edge_aware_100_1000"]]) == "padj"] <- "FDR"
+colnames(results_list[["edge_aware_100_3000"]])[colnames(results_list[["edge_aware_100_3000"]]) == "padj"] <- "FDR"
+colnames(results_list[["edge_aware_100_5000"]])[colnames(results_list[["edge_aware_100_5000"]]) == "padj"] <- "FDR"
 
 process_results_pydeseq <- function(df) {
   df %>%
@@ -157,11 +174,11 @@ process_results_edge <- function(df) {
 }
 
 
-res_naive_pydeseq <- process_results_pydeseq(results_list[["pydeseq_naive_10_1000"]])
-res_naive_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
+res_naive_pydeseq <- process_results_pydeseq(results_list[["pydeseq_naive_100_5000"]])
+res_naive_edge <- process_results_edge(results_list[["edge_naive_100_5000"]])
 
-res_aware_pydeseq <- process_results_pydeseq(results_list[["pydeseq_aware_10_1000"]])
-res_aware_edge <- process_results_edge(results_list[["edge_naive_10_1000"]])
+res_aware_pydeseq <- process_results_pydeseq(results_list[["pydeseq_aware_100_5000"]])
+res_aware_edge <- process_results_edge(results_list[["edge_aware_100_5000"]])
 
 rownames_idx <- match(rownames(res_aware_pydeseq), rownames(res_aware_edge))
 res_aware_edge <- res_aware_edge[rownames_idx,] %>% na.omit()
@@ -169,8 +186,8 @@ res_naive_edge <- res_naive_edge[rownames_idx,] %>% na.omit()
 
 
 ## AUROC calculation ##
-true_labels <- rna_counts_list[["rna_10_1000"]]@variable.annotations[["differential.expression"]]
-names(true_labels) <- rownames(rna_counts_list[["rna_10_1000"]]@count.matrix)
+true_labels <- rna_counts_list[["rna_100_5000"]]@variable.annotations[["differential.expression"]]
+names(true_labels) <- rownames(rna_counts_list[["rna_100_5000"]]@count.matrix)
 
 p1 <- as.data.frame(res_naive_pydeseq$padj)
 rownames(p1) <- rownames(res_naive_pydeseq)
@@ -203,15 +220,15 @@ roc <- diagplotRoc(
   x = "fpr", 
   y = "tpr", 
   output = "file", 
-  line_colors = c("#67BF5C", "#AD8BC9", "#729ECE", "#ED665D"),
-  line_width = 6,
-  plot_title = "Sample size: 10; Genes: 1000",
+  line_colors = c("#00BA38", "blueviolet", "#0000FF",  "#EE3F3FFF"),
+  line_width = 7,
+  plot_title = "Sample size: 100; Genes: 5000",
   axis_text_size = 2.0,
   legend_text_size = 1.6,
   font.main = 1,
   title_text_size = 2.4, 
   margin = c(6, 6, 6, 5),
-  path = "CN-aware-DGE/plots/supplementary/roc_10_1000.png"
+  path = "CN-aware-DGE/plots/supplementary/roc_100_5000.png"
 )
 roc
 

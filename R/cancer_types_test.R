@@ -4,6 +4,8 @@ pkgs <- c("dplyr", "ggplot2", "cluster", "factoextra", "heatmaply", "DESeq2", "t
 sapply(pkgs, require, character.only = TRUE)
 
 
+### Data preprocessing ###
+
 # Input data
 #cnv_tumor <- readRDS("TCGA/lung/LUAD/data/cnv_tumor.RDS")
 #rna_normal <- readRDS("TCGA/lung/LUAD/data/rna_normal.RDS")
@@ -35,23 +37,25 @@ cnv_tumor <- cnv_tumor[filtered_genes$Gene, ]
 
 # Gene expression variability check
 
-gene_iqr <- apply(rna, 1, IQR)
+#gene_iqr <- apply(rna, 1, IQR)
 
-variability_summary <- data.frame(
-  Gene = rownames(rna),
-  IQR = gene_iqr
-)
-iqr_threshold <- quantile(variability_summary$IQR, 0.25)
+#variability_summary <- data.frame(
+  #Gene = rownames(rna),
+  #IQR = gene_iqr
+#)
+#iqr_threshold <- quantile(variability_summary$IQR, 0.25)
 
-filtered_genes_iqr <- variability_summary %>%
-  filter(IQR > iqr_threshold)
+#filtered_genes_iqr <- variability_summary %>%
+  #filter(IQR > iqr_threshold)
 
-rna_filt <- rna[filtered_genes_iqr$Gene, ]
-cnv_tumor <- cnv_tumor[filtered_genes_iqr$Gene, ]
+#rna_filt <- rna[filtered_genes_iqr$Gene, ]
+#cnv_tumor <- cnv_tumor[filtered_genes_iqr$Gene, ]
+
+
+# Plot CN data
 
 cnv_tumor <- apply(cnv_tumor, 2, function(x) ifelse(x > 15, 15, x))
 
-# Plot CN data
 cnv_mean_coad <- cnv_tumor %>% 
   as.data.frame() %>% 
   dplyr::mutate(cnv_mean = rowMeans(cnv_tumor)) %>% 
@@ -113,15 +117,12 @@ write.csv(metadata, file = "TCGA/colon/test/metadata_all_genes.csv", row.names =
 
 ### Downstream analysis ###
 
-# Volcano plot 
+res_naive_pydeseq <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNnaive_all_genes.csv")
+res_aware_pydeseq <- read.csv("CN-aware-DGE/Python/results/COAD/res_CNaware_all_genes.csv")
+cnv <- read.csv("TCGA/colon/test/cnv_test_all_genes.csv") %>% remove_rownames %>% column_to_rownames(var="X")
 
-res_naive_pydeseq <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNnaive_all_genes.csv")
-res_aware_pydeseq <- read.csv("CN-aware-DGE/Python/results/LUAD/res_CNaware_all_genes.csv")
-cnv <- read.csv("TCGA/lung/LUAD/cnv_test_all_genes.csv") %>% remove_rownames %>% column_to_rownames(var="X")
-
-cnv_tumor <- cnv[,46:90]
+cnv_tumor <- cnv[,13:24]
 cnv_tumor <- cnv_tumor * 2
-
 
 classify_cn <- function(cn_value) {
   if (cn_value == 0 || cn_value == 1) {
@@ -133,7 +134,7 @@ classify_cn <- function(cn_value) {
   } else if (cn_value > 4) {
     return("Amplification")
   } else {
-    return(NA)  # Handle unexpected values if needed
+    return(NA)  
   }
 }
 
@@ -175,15 +176,14 @@ cnv_mean <- cnv_mean %>%
 cnv_mean <- cbind(cnv_mean, loss_labels)
 cnv_mean$cnv_group <- ifelse(cnv_mean$isCNloss == "loss", "loss", cnv_mean$cnv_group)
 
+
 lfc_cut <- 1.0
 pval_cut <- .05
-#de_gene_colors <- c("n.s." = "gray", "Down-reg" = "#8491B4B2", "Up-reg"="#E7969C")
 
 res_aware_pydeseq <- res_aware_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "n.s.", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
-  #dplyr::mutate(tool = "PyDESeq2") %>% 
-  dplyr::mutate(tumor_type = "LUAD") %>% 
+  dplyr::mutate(tumor_type = "COAD") %>% 
   dplyr::mutate(method = "CN aware") %>%
   dplyr::select(X,log2FoldChange, padj, isDE, DEtype, tumor_type, method) %>% 
   remove_rownames %>% 
@@ -193,47 +193,16 @@ res_naive_pydeseq <- res_naive_pydeseq %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "n.s.", if_else(log2FoldChange > 0, "Up-reg", "Down-reg"))) %>%
   dplyr::mutate(method = "CN naive") %>% 
-  dplyr::mutate(tumor_type = "LUAD") %>% 
-  #dplyr::mutate(tool = "PyDESeq2") %>%
+  dplyr::mutate(tumor_type = "COAD") %>% 
   dplyr::select(X,log2FoldChange, padj, isDE, DEtype, tumor_type, method) %>% 
   remove_rownames %>% 
   column_to_rownames(var="X")
 
-
 colnames(res_naive_pydeseq) <- c("logFC", "padj", "isDE", "DEtype", "tumor_type", "method")
 colnames(res_aware_pydeseq) <- colnames(res_naive_pydeseq) 
 
-#d_volcano_luad <- rbind(res_naive_pydeseq, res_aware_pydeseq)
-#d_volcano_luad <- d_volcano_luad %>% dplyr::filter(logFC > -5.0 ,)
 
-#d_volcano_brca <- rbind(res_naive_pydeseq, res_aware_pydeseq)
-#d_volcano_brca <- d_volcano_brca %>% dplyr::filter(logFC < 5.5 ,)
-  
-#p_volcanos <-  d_volcano_brca %>% 
-  #ggplot(mapping = aes(x=logFC, y=-log10(padj), col=DEtype)) +
-  #geom_point(size=.9) +
-  #theme_bw() +
-  #scale_color_manual(values = de_gene_colors) +
-  #ggh4x::facet_nested(factor(tool, levels = c("PyDESeq2", "edgeR"))~factor(method, levels = c("CN naive", "CN aware")), scales ="free", independent = "y")+
-  #ggh4x::facet_nested(factor(method, levels = c("CN naive", "CN aware"))~factor(tumor_type, levels = c("LUAD", "BRCA", "LIHC", "HNSC", "COAD")), scales ="free", independent = "y")+
-  #facet_wrap(~factor(method, levels = c("CN naive", "CN aware")), nrow=1, scale = "free")+
-  #ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
-  #ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
-  #ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
-  #ggplot2::theme(legend.position = 'bottom',
-                 #legend.text = element_text(size = 14),
-                 #strip.text = element_text(size = 16, face = "plain"),
-                 #axis.text = element_text(size = 12),
-                 #axis.title = element_text(size = 16) )
-#p_volcanos
-
-
-
-
-# Gene groups selection: Dosage-sensitive | Dosage-insensitive | Dosage-compensated
-
-lfc_cut <- 1.0
-pval_cut <- .05
+# Gene groups separation: Dosage-sensitive | Dosage-insensitive | Dosage-compensated
 
 res_aware_pydeseq <- cbind(res_aware_pydeseq, cnv_mean)
 res_naive_pydeseq <- cbind(res_naive_pydeseq, cnv_mean)
@@ -298,6 +267,9 @@ colnames(cn_aware_non_DE) <- c("log2FC", "padj", "isDE", "DEtype", "tumor_type",
 
 cn_naive <- rbind(cn_naive_d_sensitive, cn_naive_d_insensitive, cn_naive_d_compensated, cn_naive_non_DE)
 cn_aware <- rbind(cn_aware_d_sensitive, cn_aware_d_insensitive, cn_aware_d_compensated, cn_aware_non_DE)
+
+# Volcano plot #
+
 #cn_naive <- cn_naive[!(row.names(cn_naive) %in% c("PYCR1")),] #LUAD
 
 v_plot_data_luad <- rbind(cn_naive, cn_aware)
@@ -349,6 +321,7 @@ p_volcanos
 
 ggsave("CN-aware-DGE/plots/main/volcano_luad.png", dpi = 400, width = 10.0, height = 4.0, plot = p_volcanos)
 
+
 # CN barplot
 combined_data <- rbind(cn_aware_d_sensitive, cn_aware_d_insensitive, cn_aware_d_compensated, cn_aware_non_DE)
 
@@ -371,27 +344,41 @@ barplot_data <- combined_data %>%
 
 combined_data$gene_group <- factor(combined_data$gene_group, levels = c("non-DEG", "Dosage-insensitive", "Dosage-sensitive", "Dosage-compensated"))
 
-barplot_cnv <- ggplot2::ggplot(combined_data, aes(x = gene_group, fill = cnv_group)) +
+brca_barplot <- combined_data
+lihc_barplot <- combined_data
+hnsc_barplot <- combined_data
+coad_barplot <- combined_data
+coad_barplot <- na.omit(coad_barplot)
+
+joint_data <- rbind(brca_barplot, lihc_barplot, hnsc_barplot, coad_barplot)
+
+joint_data$tumor_type <- factor(joint_data$tumor_type, levels = c("BRCA", "LIHC", "HNSC", "COAD"))
+
+barplot_cnv <- ggplot2::ggplot(joint_data, aes(x = gene_group, fill = cnv_group)) +
   geom_bar(position = "stack", width = 0.6) + 
   #geom_text(aes(label = Count), position = position_stack(vjust = 0.5), size = 4) +  
   scale_fill_manual(values = cnv_colors) +  
-  theme_classic() +  
+  theme_bw() +  
+  facet_wrap(~tumor_type, scales = "free", nrow = 1)+
   labs(y = "gene counts", x = "", title = "", fill = "CN group") +  
   theme(
-    axis.text.x = element_text(size = 16, angle = 30, hjust = 1, color = "black"),  
-    axis.text.y = element_text(size = 16, color = "black"),                         
-    axis.title.x = element_text(size = 16, face = "plain", color = "black"),          
-    axis.title.y = element_text(size = 16, face = "plain", color = "black"),          
+    axis.text.x = element_text(size = 14, angle = 30, hjust = 1, color = "black"),  
+    axis.text.y = element_text(size = 14, color = "black"),                         
+    axis.title.x = element_text(size = 14, face = "plain", color = "black"),          
+    axis.title.y = element_text(size = 14, face = "plain", color = "black"),
+    strip.text = element_text(size = 16, face = "plain", color = "black"),
     legend.position = 'bottom',
-    legend.text = element_text(size = 16, color = "black"),                          
-    legend.title = element_text(size = 18, face = "plain", color = "black")           
+    legend.text = element_text(size = 14, color = "black"),                          
+    legend.title = element_text(size = 16, face = "plain", color = "black")           
   )
 barplot_cnv
 
-ggsave("CN-aware-DGE/plots/main/barplot_cnv_luad_legend.png", dpi = 400, width = 6.5, height = 6.5, plot = barplot_cnv)
+ggsave("CN-aware-DGE/plots/main/barplot_cnv_luad_legend.png", dpi = 400, width = 6.5, height = 6.0, plot = barplot_cnv)
+ggsave("CN-aware-DGE/plots/supplementary/barplot_cnv.png", dpi = 400, width = 10.0, height = 4.5, plot = barplot_cnv)
 
 
 # Scatter - comparison LFC | p-value
+
 lfc_naive <- res_naive %>% dplyr::select(logFC_naive) %>% dplyr::rename(logFC_naive=logFC_naive)
 lfc_aware <- res_aware %>% dplyr::select(logFC_aware, cnv_mean_aware) %>% dplyr::rename(logFC_aware=logFC_aware)
 
@@ -408,10 +395,16 @@ plot_lfc <- plot_lfc %>%
 plot_lfc <- merge(plot_lfc, loss_labels, by = "row.names")
 plot_lfc$cnv_group <- ifelse(plot_lfc$isCNloss == "loss", "loss", plot_lfc$cnv_group)
 
-plot_lfc <- plot_lfc %>% dplyr::mutate(eff_size_diff = abs(logFC_naive - logFC_aware))
-
 plot_lfc <- plot_lfc %>% dplyr::filter(logFC_naive > -5.0 ,)
-plot_lfc <- plot_lfc %>% dplyr::filter(logFC_aware < 5.0 ,)
+plot_lfc <- plot_lfc %>% dplyr::filter(logFC_aware > -5.0 ,)
+
+plot_lfc_coad <- plot_lfc %>% 
+  dplyr::mutate(eff_size_diff = abs(logFC_naive - logFC_aware)) %>% 
+  dplyr::mutate(tumor_type = "COAD")
+
+plot_lfc_coad <- na.omit(plot_lfc_coad)
+
+plot_lfc <- rbind(plot_lfc_brca, plot_lfc_lihc, plot_lfc_hnsc, plot_lfc_coad)
 
 comparison_lfc <- ggplot(plot_lfc, aes(x=logFC_aware, y=logFC_naive, color = cnv_group)) + 
   #geom_pointdensity(shape=20) +
@@ -426,10 +419,11 @@ comparison_lfc <- ggplot(plot_lfc, aes(x=logFC_aware, y=logFC_naive, color = cnv
   ylab ("Effect size (log2) CN-naive") +
   scale_x_continuous(breaks = seq(-6, 6, by = 2))+
   scale_y_continuous(breaks = seq(-6, 6, by = 2))+
-  facet_wrap(~factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")), nrow = 1)+
+  #facet_wrap(~factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")), nrow = 1)+
+  ggh4x::facet_nested(factor(tumor_type, levels = c("BRCA", "LIHC", "HNSC", "COAD"))~factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")))+
   scale_color_manual(name = "CNV Group", values = cnv_colors)+
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1)))+
-  theme_classic()+
+  theme_bw()+
   theme(
     legend.position="bottom",
     axis.title.x = element_text(size=16, color = "black"),  
@@ -443,8 +437,10 @@ comparison_lfc <- ggplot(plot_lfc, aes(x=logFC_aware, y=logFC_naive, color = cnv
 comparison_lfc
 
 ggsave("CN-aware-DGE/plots/main/scatter_lfc_luad.png", dpi = 400, width = 7.0, height = 3.5, plot = comparison_lfc)
+ggsave("CN-aware-DGE/plots/supplementary/scatter_lfc.png", dpi = 400, width = 9.0, height = 9.0, plot = comparison_lfc)
 
-# Effect size difference
+
+# Effect size difference (log2)
 plot_lfc <- plot_lfc %>% dplyr::filter(eff_size_diff < 3.0 ,)
 
 plot_lfc$cnv_group <- factor(plot_lfc$cnv_group, levels = c("loss", "neutral", "gain", "amplification"))
@@ -453,26 +449,25 @@ violin <- ggplot(plot_lfc, aes(x = cnv_group, y = eff_size_diff, fill = cnv_grou
   geom_violin(trim = FALSE, scale = "width", alpha = 0.7) + 
   geom_boxplot(width = 0.1, outlier.shape = NA, alpha = 0.5) + 
   scale_fill_manual(values = cnv_colors) + 
-  xlab("CNV Group") + 
+  xlab("CNV group") + 
   ylab("Effect size difference (log2)") + 
-  #ggtitle("Effect size difference between CN-naive and CN-aware methods")+
-  theme_classic() +
+  theme_bw() +
+  facet_wrap(~factor(tumor_type, levels = c("BRCA", "LIHC", "HNSC", "COAD")), nrow = 4)+
   theme(
     legend.position = "none",
     axis.title.x = element_text(size = 18, color = "black"),
     axis.title.y = element_text(size = 18, color = "black"),
     axis.text.x = element_text(size = 18, angle = 30, hjust = 1, color = "black"),
-    axis.text.y = element_text(size = 18, color = "black")
+    axis.text.y = element_text(size = 18, color = "black"),
+    strip.text = element_text(size = 16, face = "plain", color = "black")
   )
 violin
 
 ggsave("CN-aware-DGE/plots/main/violin_luad.png", dpi = 400, width = 5.5, height = 4.5, plot = violin)
+ggsave("CN-aware-DGE/plots/supplementary/violin.png", dpi = 400, width = 3.5, height = 12.0, plot = violin)
 
-#ggarrange(comparison_lfc,               
-  #ggarrange(violin, ncol = 2, labels = c("B")), 
-  #nrow = 2, 
-  #labels = "A"      
-#) 
+
+# p_value
 
 pval_naive <- res_naive %>% dplyr::select(padj_naive) %>% dplyr::rename(padj_naive=padj_naive)
 pval_aware <- res_aware %>% dplyr::select(padj_aware, cnv_mean_aware) %>% dplyr::rename(padj_aware = padj_aware)
@@ -489,7 +484,21 @@ plot_pval <- plot_pval %>%
 plot_pval<- merge(plot_pval, loss_labels, by = "row.names")
 plot_pval$cnv_group <- ifelse(plot_pval$isCNloss == "loss", "loss", plot_pval$cnv_group)
 
-comparison_pval <- ggplot(plot_pval, aes(x=-log10(padj_naive), y=-log10(padj_aware), color = cnv_group)) + 
+brca_pval <- plot_pval %>% dplyr::mutate(tumor_type = "BRCA")
+brca_pval <- brca_pval %>% dplyr::filter(padj_naive > 2.491311e-147 ,)
+
+lihc_pval <- plot_pval %>% dplyr::mutate(tumor_type = "LIHC")
+lihc_pval <- lihc_pval %>% dplyr::filter(padj_naive > 3.824830e-63 ,)
+
+hnsc_pval <- plot_pval %>% dplyr::mutate(tumor_type = "HNSC")
+hnsc_pval <- hnsc_pval %>% dplyr::filter(padj_aware >  5.140434e-42,)
+
+coad_pval <- plot_pval %>% dplyr::mutate(tumor_type = "COAD") %>% na.omit()
+coad_pval <- coad_pval %>% dplyr::filter(padj_aware > 3.173776e-71 ,)
+
+joint_pvalue <- rbind(brca_pval, lihc_pval, hnsc_pval, coad_pval)
+
+comparison_pval <- ggplot(hnsc_pval, aes(x=-log10(padj_naive), y=-log10(padj_aware), color = cnv_group)) + 
   geom_point(shape=20, size=3) +
   #geom_point(data=subset(plot_pval, cnv_group != "amplification"), aes(color=cnv_group), shape=20)+
   #geom_point(data=subset(plot_pval, cnv_group == "amplification"), aes(color=cnv_group), size=2, shape=20) + 
@@ -500,12 +509,14 @@ comparison_pval <- ggplot(plot_pval, aes(x=-log10(padj_naive), y=-log10(padj_awa
   #geom_abline(intercept = 0, slope = 1, linetype="dotted", color="black", size=1) +
   xlab("FDR CN-aware") +
   ylab ("FDR CN-naive") +
-  scale_x_continuous(breaks = seq(0, 120, by = 40))+
-  scale_y_continuous(breaks = seq(0, 120, by = 40))+
+  scale_x_continuous(breaks = seq(0, 100, by = 20))+
+  scale_y_continuous(breaks = seq(0, 100, by = 20))+
   scale_color_manual(name = "CNV group", values = cnv_colors)+
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1)))+
-  facet_wrap(~factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")), nrow = 1)+
-  theme_classic()+
+  #facet_wrap(~factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")), nrow = 1)+
+  theme_bw()+
+  ggh4x::facet_nested(factor(tumor_type, levels = c("BRCA", "LIHC", "HNSC", "COAD"))~
+                        factor(cnv_group, levels = c("loss", "neutral", "gain", "amplification")))+
   theme(
     legend.position="bottom",
     axis.title.x = element_text(size=16, color = "black"),  
@@ -519,13 +530,11 @@ comparison_pval <- ggplot(plot_pval, aes(x=-log10(padj_naive), y=-log10(padj_awa
 comparison_pval
 
 ggsave("CN-aware-DGE/plots/main/scatter_pvalue_luad.png", dpi = 400, width = 7.0, height = 3.5, plot = comparison_pval)
+ggsave("CN-aware-DGE/plots/supplementary/pval_hnsc.png", dpi = 400, width = 8.0, height = 3.0, plot = comparison_pval)
   
-spacer <- grid::textGrob("")
-combined_plot <- gridExtra::grid.arrange(comparison_lfc, spacer, comparison_pval, nrow = 3, heights = c(1.5, 0.2, 1.5))
-
-ggsave("CN-aware-DGE/plots/main/scatter_lfc_pval.png", plot = grid::grobTree(combined_plot), dpi = 400, width = 6.0, height = 12, units = "in")
-
-ggsave("CN-aware-DGE/plots/main/comparison_pval.png", dpi = 400, width = 5.0, height = 5.0, comparison_pval)
+#spacer <- grid::textGrob("")
+#combined_plot <- gridExtra::grid.arrange(comparison_lfc, spacer, comparison_pval, nrow = 3, heights = c(1.5, 0.2, 1.5))
+#ggsave("CN-aware-DGE/plots/main/scatter_lfc_pval.png", plot = grid::grobTree(combined_plot), dpi = 400, width = 6.0, height = 12, units = "in")
 
 
 
@@ -550,12 +559,12 @@ data_ggforce$CN_aware <- factor(data_ggforce$CN_aware)
 
 data_ggforce <- data_ggforce %>%
   group_by(CN_naive, CN_aware) %>%
-  mutate(y_mid = freq / 2)
+  mutate(y_mid = freq / 2) %>% 
+  na.omit()
 
-#g_group_colors <- c("Down-reg" = "#8491B4B2", "n.s." = "lightgray", "Up-reg" = "#F5A2A2")
 g_group_colors <- c("Down-reg" = "#3C5488B2", "n.s." = "lightgray", "Up-reg" = "#CC7677")
 
-sankey_luad <- ggplot(data_ggforce, aes(x = x, id = id, split = y, value = freq)) +
+sankey <- ggplot(data_ggforce, aes(x = x, id = id, split = y, value = freq)) +
   geom_parallel_sets(aes(fill = CN_naive), alpha = 0.9, axis.width = 0.2,
                      n = 4415, strength = 0.5, color = "black", linewidth = 0.3) +
   geom_parallel_sets_axes(axis.width = 0.25, fill = "gray93",
@@ -564,7 +573,7 @@ sankey_luad <- ggplot(data_ggforce, aes(x = x, id = id, split = y, value = freq)
   scale_fill_manual(values = g_group_colors, name = "Gene group") +
   scale_color_manual(values = g_group_colors) +
   scale_x_continuous(breaks = 1:2, labels = c("CN-naive", "CN-aware"))+
-  theme_minimal() +
+  theme_classic() +
   theme(
     legend.position = "bottom",
     legend.title = element_text(size = 15, face = "plain"),
@@ -575,7 +584,7 @@ sankey_luad <- ggplot(data_ggforce, aes(x = x, id = id, split = y, value = freq)
     axis.text.x = element_blank(),
     axis.title.x  = element_blank()
   )
-sankey_luad
+sankey
 
-
+ggsave("CN-aware-DGE/plots/supplementary/sankey_coad.png", dpi = 400, width = 4.0, height = 5.0, plot = sankey)
 

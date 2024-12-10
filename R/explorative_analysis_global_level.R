@@ -8,8 +8,8 @@ sapply(pkgs, require, character.only = TRUE)
 source("CN-aware-DGE/R/utils.R")
 
 # Input data
-data_path <- "TCGA/lung/LUAD/cnv_tumor.RDS"
-dataset_name <- "LUAD_cnv"
+data_path <- "TCGA/liver/cnv_tumor.RDS"
+dataset_name <- "LIHC_cnv"
 cnv_tumor <- readRDS(data_path)
 
 # Clustering patients 
@@ -24,18 +24,21 @@ cnv_tumor <- as.matrix(t(cnv_tumor))
 cnv_tumor <- cnv_tumor %>% as.data.frame() %>% dplyr::select(7,5,13,14,15,18,22,24,25,28) 
 
 #BRCA
-#cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(5,4,1),]
+cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(5,4,1),]
 
 #LUSC
-#cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(1,2),]
-
 cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(1,2),]
+
+#LIHC
+cnv_tumor <- as.data.frame(cnv_tumor)
+cnv_filt <- cnv_tumor[cnv_tumor$Cluster %in% c(1,2),]
+
 cnv_filt <- subset(cnv_filt, select=-c(Cluster))
 cnv_filt <- as.matrix(t(cnv_filt))
 cnv_filt<- apply(cnv_tumor, 2, function(x) ifelse(x > 15, 15, x)) 
 
 hist(rowMeans(cnv_filt),
-     main = "LUAD", 
+     main = "LIHC", 
      xlab = "CN state",
      ylab = "Proportion",
      col = "#E1DEFC",
@@ -60,7 +63,7 @@ rna_norm <- rna[[1]]
 rna_tum <- rna[[2]]
 
 # Exclude genes with low expression in normal tissue #
-low_expression_threshold <- 15
+low_expression_threshold <- 20
 expression_summary <- data.frame(
   Gene = rownames(rna_norm),
   MeanExpression = rowMeans(rna_norm)
@@ -99,11 +102,11 @@ rna_zscore_tumor <- rna_zscore_tumor %>%
 
 cnv <- cnv_mean %>% 
   dplyr::mutate(cnv = case_when(
-    cnv_mean > 0.5 & cnv_mean <= 1.8 ~ "1",
-    cnv_mean > 1.8 & cnv_mean <= 2.5 ~ "2",
+    cnv_mean > 0.0 & cnv_mean <= 1.7 ~ "1",
+    cnv_mean > 1.7 & cnv_mean <= 2.5 ~ "2",
     cnv_mean > 2.5 & cnv_mean <= 3.5 ~ "3",
-    cnv_mean > 3.3 & cnv_mean <= 4.2 ~ "4",
-    cnv_mean > 4.2 ~ "5")) %>% 
+    cnv_mean > 3.5 & cnv_mean <= 4.5 ~ "4",
+    cnv_mean > 4.5 ~ "5")) %>% 
   dplyr::select(cnv)
 
 cnv <- cnv[rownames(cnv) %in% rownames(rna_zscore_normal),]

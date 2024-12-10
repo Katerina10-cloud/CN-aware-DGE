@@ -80,8 +80,8 @@ write.csv(metadata, file = "TCGA/lung/LUSC/metadata.csv", row.names = T)
 res_naive <- read.csv("CN-aware-DGE/Python/results/case_studies/LUSC/res_CNnaive.csv")
 res_aware <- read.csv("CN-aware-DGE/Python/results/case_studies/LUSC/res_CNaware.csv")
 cnv <- read.csv("TCGA/lung/LUSC/cnv.csv")
-cancer_genes <- read.delim("TCGA/lung/cancerGeneList.tsv")
-cosmic_genes <- read.csv("TCGA/lung/Cosmic_gene_list.csv")
+#cancer_genes <- read.delim("TCGA/lung/cancerGeneList.tsv")
+#cosmic_genes <- read.csv("TCGA/lung/Cosmic_gene_list.csv")
 hk_genes <- readRDS("TCGA/lung/housekeeping_genes_lung.RDS")
 hk_genes <- hk_genes %>% dplyr::select(Gene.Symbol) %>% 
   dplyr::rename(geneID = Gene.Symbol)
@@ -89,53 +89,54 @@ hk_genes <- hk_genes %>% dplyr::select(Gene.Symbol) %>%
 
 # Prepare data #
 
-oncogenes <- cancer_genes %>% dplyr::filter(Is.Oncogene=="Yes") %>% 
-  dplyr::select(Hugo.Symbol) %>% 
-  dplyr::rename(geneID = Hugo.Symbol) %>% 
-  dplyr::mutate(gene_type = "Oncogene")
+#oncogenes <- cancer_genes %>% dplyr::filter(Is.Oncogene=="Yes") %>% 
+  #dplyr::select(Hugo.Symbol) %>% 
+  #dplyr::rename(geneID = Hugo.Symbol) %>% 
+  #dplyr::mutate(gene_type = "Oncogene")
 
-tsg <- cancer_genes %>% dplyr::filter(Is.Tumor.Suppressor.Gene=="Yes") %>% 
-  dplyr::select(Hugo.Symbol) %>% 
-  dplyr::rename(geneID=Hugo.Symbol) %>% 
-  dplyr::mutate(gene_type = "TSG")
+#tsg <- cancer_genes %>% dplyr::filter(Is.Tumor.Suppressor.Gene=="Yes") %>% 
+  #dplyr::select(Hugo.Symbol) %>% 
+  #dplyr::rename(geneID=Hugo.Symbol) %>% 
+  #dplyr::mutate(gene_type = "TSG")
 
-cancer_genes_oncokb <- rbind(oncogenes, tsg)
+#cancer_genes_oncokb <- rbind(oncogenes, tsg)
 
-oncogenes_cosmic <- cosmic_genes %>% dplyr::filter(Role.in.Cancer %in% c("oncogene", "oncogene, TSG", "oncogene, fusion", "oncogene, TSG, fusion"))
-tsg_cosmic <- cosmic_genes %>% dplyr::filter(Role.in.Cancer %in% c("TSG", "oncogene, TSG", "TSG, fusion", "oncogene, TSG, fusion"))
+#oncogenes_cosmic <- cosmic_genes %>% dplyr::filter(Role.in.Cancer %in% c("oncogene", "oncogene, TSG", "oncogene, fusion", "oncogene, TSG, fusion"))
+#tsg_cosmic <- cosmic_genes %>% dplyr::filter(Role.in.Cancer %in% c("TSG", "oncogene, TSG", "TSG, fusion", "oncogene, TSG, fusion"))
 
-oncogenes_cosmic <- oncogenes_cosmic %>% 
-  dplyr::select(Gene.Symbol) %>% 
-  dplyr::rename(geneID=Gene.Symbol) %>% 
-  dplyr::mutate(gene_type = "Oncogene")
+#oncogenes_cosmic <- oncogenes_cosmic %>% 
+  #dplyr::select(Gene.Symbol) %>% 
+  #dplyr::rename(geneID=Gene.Symbol) %>% 
+  #dplyr::mutate(gene_type = "Oncogene")
 
-tsg_cosmic <- tsg_cosmic %>% 
-  dplyr::select(Gene.Symbol) %>% 
-  dplyr::rename(geneID=Gene.Symbol) %>% 
-  dplyr::mutate(gene_type = "TSG")
+#tsg_cosmic <- tsg_cosmic %>% 
+  #dplyr::select(Gene.Symbol) %>% 
+  #dplyr::rename(geneID=Gene.Symbol) %>% 
+  #dplyr::mutate(gene_type = "TSG")
 
-cancer_genes_cosmic <- rbind(oncogenes_cosmic, tsg_cosmic)
-cancer_genes_joint <- rbind(cancer_genes_oncokb, cancer_genes_cosmic)
+#cancer_genes_cosmic <- rbind(oncogenes_cosmic, tsg_cosmic)
+#cancer_genes_joint <- rbind(cancer_genes_oncokb, cancer_genes_cosmic)
 
-cnv <- cnv %>% 
+cnv_tumor <- cnv %>% 
   remove_rownames %>% 
   column_to_rownames(var="X") %>%  
   dplyr::select(52:102,)
-cnv <- cnv * 2
+cnv_tumor <- cnv_tumor * 2
 
-cnv_mean <- cnv %>% 
+
+cnv_mean <- cnv_tumor %>% 
   as.data.frame() %>% 
-  dplyr::mutate(cnv_mean = rowMeans(cnv)) %>% 
-  dplyr::mutate(geneID = rownames(cnv)) %>% 
+  dplyr::mutate(cnv_mean = rowMeans(cnv_tumor)) %>% 
+  dplyr::mutate(geneID = rownames(cnv_tumor)) %>% 
   dplyr::select(geneID, cnv_mean) 
 
 res_naive <- res_naive %>% dplyr::select(X,log2FoldChange, padj) 
 res_aware <- res_aware %>% dplyr::select(X,log2FoldChange, padj) 
 
+
 lfc_cut <- 1.0
 pval_cut <- .05
 
-#de_gene_colors <- c("Not significant" = "gray", "Down-reg" = "royalblue3", "Up-reg"="hotpink3")  
 
 res_aware <- res_aware %>%
   dplyr::mutate(isDE = (abs(log2FoldChange) >= lfc_cut) & (padj <= pval_cut)) %>%
@@ -184,16 +185,16 @@ non_deg <- res_joint %>%
 
 
 # Cancer genes per category
-d_sensitive_cancer_g <- d_sensitive[rownames(d_sensitive) %in% cancer_genes_joint$geneID ,]
-d_sensitive_cancer_g <- d_sensitive_cancer_g[!duplicated(rownames(d_sensitive_cancer_g)), ]
+#d_sensitive_cancer_g <- d_sensitive[rownames(d_sensitive) %in% cancer_genes_joint$geneID ,]
+#d_sensitive_cancer_g <- d_sensitive_cancer_g[!duplicated(rownames(d_sensitive_cancer_g)), ]
 
-d_compensated_cancer_g <- d_compensated[rownames(d_compensated) %in% cancer_genes_joint$geneID ,]
-d_compensated_cancer_g <- d_compensated_cancer_g[!duplicated(rownames(d_compensated_cancer_g)), ]
+#d_compensated_cancer_g <- d_compensated[rownames(d_compensated) %in% cancer_genes_joint$geneID ,]
+#d_compensated_cancer_g <- d_compensated_cancer_g[!duplicated(rownames(d_compensated_cancer_g)), ]
 
-d_insensitive_cancer_g <- d_insensitive[rownames(d_insensitive) %in% cancer_genes_joint$geneID ,]
-d_insensitive_cancer_g <- d_insensitive_cancer_g[!duplicated(rownames(d_insensitive_cancer_g)), ]
+#d_insensitive_cancer_g <- d_insensitive[rownames(d_insensitive) %in% cancer_genes_joint$geneID ,]
+#d_insensitive_cancer_g <- d_insensitive_cancer_g[!duplicated(rownames(d_insensitive_cancer_g)), ]
 
-d_insensitive_cosmic <- d_insensitive_cancer_g[rownames(d_insensitive_cancer_g) %in% cancer_genes_cosmic$geneID ,]
+#d_insensitive_cosmic <- d_insensitive_cancer_g[rownames(d_insensitive_cancer_g) %in% cancer_genes_cosmic$geneID ,]
 
 # Housekeeping genes per category
 d_sensitive_hk <- d_sensitive[rownames(d_sensitive) %in% hk_genes$geneID ,]
@@ -280,7 +281,7 @@ p_volcanos
 
 
 # Barplot #
-cancer_g <- c(cancer_genes$geneID)
+#cancer_g <- c(cancer_genes$geneID)
 #hk_genes <- c(hk_genes$geneID)
 
 label_genes <- function(gene_list, cancer_genes, hk_genes) {
@@ -294,12 +295,46 @@ label_genes <- function(gene_list, cancer_genes, hk_genes) {
 
 combined_data <- rbind(cn_aware_d_sensitive, cn_aware_d_insensitive, cn_aware_d_compensated)
 
+classify_cn <- function(cn_value) {
+  if (cn_value == 0 || cn_value == 1) {
+    return("Loss")
+  } else if (cn_value == 2) {
+    return("Neutral")
+  } else if (cn_value == 3 || cn_value == 4) {
+    return("Gain")
+  } else if (cn_value > 4) {
+    return("Amplification")
+  } else {
+    return(NA)  
+  }
+}
+
+cn_categories <- apply(cnv_tumor, c(1, 2), classify_cn)
+loss_proportion <- apply(cn_categories, 1, function(x) mean(x == "Loss"))
+loss_proportion <- as.data.frame(loss_proportion)
+
+loss_threshold <- 0.30
+loss_labels <- loss_proportion %>% 
+  dplyr::mutate(isCNloss = case_when(
+    loss_proportion > loss_threshold ~ "loss",
+    loss_proportion < loss_threshold ~ "not loss"))
+
 combined_data <- combined_data %>% 
   dplyr::mutate(cnv_group = case_when(
-    cnv_mean > 0.5 & cnv_mean <= 1.7  ~ "loss",
-    cnv_mean > 1.7 & cnv_mean <= 2.4  ~ "neutral",
-    cnv_mean > 2.4 & cnv_mean <=   4.0 ~ "gain",
+    cnv_mean > 0.0 & cnv_mean <= 1.7  ~ "loss",
+    cnv_mean > 1.7 & cnv_mean <= 2.5  ~ "neutral",
+    cnv_mean > 2.5 & cnv_mean <=   4.0 ~ "gain",
     cnv_mean > 4.0 ~ "amplification"))
+
+
+loss_labels <- loss_labels[rownames(loss_labels) %in% rownames(combined_data), ]
+
+rownames_idx <- match(rownames(combined_data), rownames(loss_labels))
+loss_labels <- loss_labels[rownames_idx,] %>% na.omit()
+
+combined_data <- cbind(combined_data, loss_labels)
+combined_data$cnv_group <- ifelse(combined_data$isCNloss == "loss", "loss", combined_data$cnv_group)
+
 
 barplot_data <- combined_data %>%
   group_by(gene_group) %>%
@@ -334,7 +369,7 @@ barplot_cnv <- ggplot2::ggplot(combined_data, aes(x = gene_group, fill = cnv_gro
   labs(y = "gene counts", x = "", title = "", fill = "CN group") +  
   theme(
     axis.text.x = element_text(size = 16, angle = 30, hjust = 1, color = "black"),  
-    axis.text.y = element_text(size = 16, color = "black"),                         
+    axis.text.y = element_text(size = 18, color = "black"),                         
     axis.title.x = element_text(size = 16, face = "plain", color = "black"),          
     axis.title.y = element_text(size = 16, face = "plain", color = "black"),          
     legend.position = 'left',
@@ -342,6 +377,8 @@ barplot_cnv <- ggplot2::ggplot(combined_data, aes(x = gene_group, fill = cnv_gro
     legend.title = element_text(size = 18, face = "plain")           
   )
 barplot_cnv
+
+ggsave("CN-aware-DGE/case_studies/plots/lusc/barplot_cnv.png", dpi = 400, width = 5.0, height = 4.0, plot = barplot_cnv)
 
 
 #rm(barplot_data)
@@ -427,7 +464,7 @@ bargraph_data <- bargraph_data %>%
 bargraph_data$method <- factor(bargraph_data$method, levels = c("CN naive", "CN aware"))
 
 # Bar graph 
-ggplot(bargraph_data, aes(x = reorder(geneID, log2FC), y = log2FC, fill = gene_group)) +
+bargraph <- ggplot(bargraph_data, aes(x = reorder(geneID, log2FC), y = log2FC, fill = gene_group)) +
   geom_bar(stat = "identity", color = "black", alpha = 1.0) +  
   geom_hline(yintercept = 0, linetype = "dashed") +  
   theme_classic() +  
@@ -448,6 +485,8 @@ ggplot(bargraph_data, aes(x = reorder(geneID, log2FC), y = log2FC, fill = gene_g
     legend.title = element_text(size = 16, face = "plain")           
   )
   
+bargraph
+
 
 ### Functional Enrichment analysis ###
 
@@ -506,15 +545,16 @@ res_ora_H_insensitive <- msig_H@result %>% mutate(gene_group = "Dosage-insensiti
 
 # GO enrichment dotplot
 
-GO_path_sensitive <- c("ribosome biogenesis", "protein-RNA complex organization", "protein processing", "positive regulation of telomere maintenance",
-                      "regulation of chromosome organization")
+GO_path_sensitive <- c("ribosome biogenesis", "protein-RNA complex organization", "protein processing",
+                      "regulation of chromosome organization", "positive regulation of telomere maintenance")
 
-GO_path_compensated <- c("positive regulation of lymphocyte activation", "negative regulation of immune effector process",
-                         "negative regulation of type II interferon production", "negative regulation of cytokine production involved in immune response",
+GO_path_compensated <- c("positive regulation of lymphocyte activation", "negative regulation of type II interferon production", 
+                         "negative regulation of immune effector process", "negative regulation of cytokine production involved in immune response",
                          "positive regulation of leukocyte differentiation")
 
-GO_path_insensitive <- c("negative regulation of cell adhesion", "mesenchymal cell differentiation",
-                         "platelet activation", "regulation of Wnt signaling pathway", "T cell mediated immunity")
+GO_path_insensitive <- c("regulation of Wnt signaling pathway", "negative regulation of cell adhesion",
+                         "mesenchymal cell differentiation", "platelet activation",  "T cell mediated immunity")
+
 
 res_GO_sensitive <- res_ora_GO_sensitive %>% filter(Description %in% GO_path_sensitive)
 res_GO_compensated <- res_ora_GO_compensated %>% filter(Description %in% GO_path_compensated)
@@ -537,36 +577,48 @@ res_GO_insensitive$log_padjust <- -log10(res_GO_insensitive$p.adjust)
 res_GO_compensated$log_padjust <- -log10(res_GO_compensated$p.adjust)
 
 p_data <- rbind(res_GO_sensitive, res_GO_compensated, res_GO_insensitive)
-p_data$Description <- fct_reorder(p_data$Description, p_data$gene_group)
+#p_data$Description <- fct_reorder(p_data$Description, p_data$gene_group)
 
+saveRDS(p_data, file = "CN-aware-DGE/case_studies/overrapres_gene_categories_lusc.RDS")
 
-p_data$Description <- fct_reorder(p_data$Description, p_data$gene_group)
+p_data$gene_group <- as.factor(p_data$gene_group)
+
+p_data <- p_data %>%
+  group_by(gene_group) %>%
+  arrange(GeneRatio_val, .by_group = TRUE) %>%
+  ungroup()
+
+p_data$Description <- factor(p_data$Description, levels = unique(p_data$Description))
 
 
 gene_group_colors = c("Dosage-sensitive" = "#FF7F0E", "Dosage-compensated" = "#f9a729", "Dosage-insensitive" = "#8F3931FF")
 
 p_gse <- ggplot(p_data, aes(x = GeneRatio_val, y = Description)) +
-  geom_point(aes(size = Count, color = pvalue))+
-  scale_color_gradient(low = "darkblue", high = "orange")+
-  labs(x = "gene ratio", y = "", title = "")+
+  geom_point(aes(size = Count, color = log_padjust))+
+  scale_color_gradient(low = "blue", high = "orange")+
+  labs(x = "gene ratio", y = "", title = "",
+    color = "padj (log10)",  
+    size = "Gene count"           
+  )+
   facet_wrap(~factor(gene_group, levels = c("Dosage-sensitive", "Dosage-insensitive", "Dosage-compensated")), nrow = 1)+
   theme(strip.text.x = element_text(size=10, color="black", face="bold.italic"))+
   theme_bw()+
-  #theme(plot.title = element_text(size = 9, face = "bold"))+
   theme(legend.position = "right")+
   scale_x_continuous(limits = c(0, 0.07))+
   #theme(axis.text.y = element_text(color = gene_group_colors[p_data$gene_group]))+
-  theme(legend.key.size = unit(0.6, "cm"), 
-        legend.text = element_text(size = 12, color = "black"),
-        legend.title = element_text(size = 14, color = "black"),
+  theme(axis.text.x = element_text(size = 16, color = "black"),  
+        axis.text.y = element_text(size = 16, color = "black"),
+        legend.key.size = unit(0.6, "cm"), 
+        legend.text = element_text(size = 14, color = "black"),
+        legend.title = element_text(size = 16, color = "black"),
         legend.spacing.y = unit(0.2, 'cm'),
-        strip.text = element_text(size = 16, face = "plain", color = "black"),
-        axis.text = element_text(size = 12, color = "black"),
+        strip.text = element_text(size = 18, face = "plain", color = "black"),
+        axis.text = element_text(size = 14, color = "black"),
         axis.title = element_text(size = 16)
-        ) 
+        )
 p_gse
 
-
+ggsave("CN-aware-DGE/case_studies/plots/lusc/GO_dotplot.png", dpi = 400, width = 17.0, height = 6.0, plot = p_gse)
 
 # Visualize Gene - Biological term network
 

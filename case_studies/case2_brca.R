@@ -105,6 +105,7 @@ write.csv(metadata, file = "TCGA/brca/case_study/metadata.csv", row.names = T)
 
 
 ### Downstaream analysis ###
+
 res_naive <- read.csv("CN-aware-DGE/Python/results/case_studies/BRCA/res_CNnaive.csv")
 res_aware <- read.csv("CN-aware-DGE/Python/results/case_studies/BRCA/res_CNaware.csv")
 cnv <- read.csv("TCGA/brca/case_study/cnv.csv") %>% remove_rownames %>% column_to_rownames(var="X")
@@ -244,12 +245,44 @@ p_volcanos
 # CN barplot
 combined_data <- rbind(cn_aware_d_sensitive, cn_aware_d_insensitive, cn_aware_d_compensated)
 
+classify_cn <- function(cn_value) {
+  if (cn_value == 0 || cn_value == 1) {
+    return("Loss")
+  } else if (cn_value == 2) {
+    return("Neutral")
+  } else if (cn_value == 3 || cn_value == 4) {
+    return("Gain")
+  } else if (cn_value > 4) {
+    return("Amplification")
+  } else {
+    return(NA)  
+  }
+}
+
+cn_categories <- apply(cnv_tumor, c(1, 2), classify_cn)
+loss_proportion <- apply(cn_categories, 1, function(x) mean(x == "Loss"))
+loss_proportion <- as.data.frame(loss_proportion)
+
+loss_threshold <- 0.25
+loss_labels <- loss_proportion %>% 
+  dplyr::mutate(isCNloss = case_when(
+    loss_proportion > loss_threshold ~ "loss",
+    loss_proportion < loss_threshold ~ "not loss"))
+
 combined_data <- combined_data %>% 
   dplyr::mutate(cnv_group = case_when(
-    cnv_mean > 0.5 & cnv_mean <= 1.7  ~ "loss",
-    cnv_mean > 1.7 & cnv_mean <= 2.4  ~ "neutral",
-    cnv_mean > 2.4 & cnv_mean <=   4.3 ~ "gain",
-    cnv_mean > 4.3 ~ "amplification"))
+    cnv_mean > 0.0 & cnv_mean <= 1.7  ~ "loss",
+    cnv_mean > 1.7 & cnv_mean <= 2.5  ~ "neutral",
+    cnv_mean > 2.5 & cnv_mean <=   4.0 ~ "gain",
+    cnv_mean > 4.0 ~ "amplification"))
+
+loss_labels <- loss_labels[rownames(loss_labels) %in% rownames(combined_data), ]
+
+rownames_idx <- match(rownames(combined_data), rownames(loss_labels))
+loss_labels <- loss_labels[rownames_idx,] %>% na.omit()
+
+combined_data <- cbind(combined_data, loss_labels)
+combined_data$cnv_group <- ifelse(combined_data$isCNloss == "loss", "loss", combined_data$cnv_group)
 
 barplot_data <- combined_data %>%
   group_by(gene_group) %>%
@@ -297,6 +330,10 @@ barplot_cnv <- ggplot2::ggplot(combined_data, aes(x = gene_group, fill = cnv_gro
     legend.title = element_text(size = 18, face = "plain")           
   )
 barplot_cnv
+
+
+ggsave("CN-aware-DGE/case_studies/plots/brca/barplot_cnv.png", dpi = 400, width = 5.0, height = 4.0, plot = barplot_cnv)
+
 
 
 # Enrichment analysis #

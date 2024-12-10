@@ -205,7 +205,6 @@ print(paste("Concordance Index (RSF):", 1 - rsf_c_index))
 
 
 # Box plot 
-#ci_cox_aware <- data.frame(C_index = c(0.70, 0.59, 0.75, 0.41, 0.49, 0.54, 0.43, 0.53, 0.76, 0.58))
 ci_cox_aware <- data.frame(C_index = c(0.70, 0.56, 0.62, 0.50, 0.57, 0.59, 0.63, 0.60, 0.52, 0.54))
 median(ci_cox_aware$C_index)
 
@@ -213,21 +212,18 @@ ci_cox_aware <- ci_cox_aware %>%
   dplyr::mutate(method = "CN-aware") %>% 
   dplyr::mutate(model = "Cox")
 
-#ci_cox_naive <- data.frame(C_index = c(0.37, 0.34, 0.48, 0.41, 0.38, 0.45, 0.35, 0.47, 0.39, 0.38))  
 ci_cox_naive <- data.frame(C_index = c(0.38, 0.57, 0.40, 0.55, 0.41, 0.30, 0.32, 0.49, 0.43, 0.34))  
 median(ci_cox_naive$C_index)
 ci_cox_naive <- ci_cox_naive %>% 
   dplyr::mutate(method = "CN-naive") %>% 
   dplyr::mutate(model = "Cox")
 
-#ci_rsf_aware <- data.frame(C_index = c(0.51, 0.43, 0.48, 0.69, 0.45, 0.58, 0.50, 0.56, 0.43, 0.54))
 ci_rsf_aware <- data.frame(C_index = c(0.46, 0.57, 0.56, 0.48, 0.62, 0.52, 0.45, 0.54, 0.55, 0.51))
 median(ci_rsf_aware$C_index)
 ci_rsf_aware <- ci_rsf_aware %>% 
   dplyr::mutate(method = "CN-aware") %>% 
   dplyr::mutate(model = "RSF")
 
-#ci_rsf_naive <- data.frame(C_index = c(0.52, 0.56, 0.54, 0.52, 0.49, 0.53, 0.57, 0.52, 0.42, 0.55))
 ci_rsf_naive <- data.frame(C_index = c(0.58, 0.50, 0.52, 0.60, 0.56, 0.50, 0.50, 0.44, 0.52, 0.54))
 median(ci_rsf_naive$C_index)
 ci_rsf_naive <- ci_rsf_naive %>% dplyr::mutate(method = "CN-naive") %>% 
