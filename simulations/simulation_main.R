@@ -1,4 +1,4 @@
-# Simulating RNA-seq counts for genes with different types of dosage sensitivity
+### Simulating RNA-seq counts for genes with different types of dosage sensitivity ###
 
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
 pkgs <- c("tidyverse", "compcodeR", "DESeq2")
@@ -55,7 +55,6 @@ simulate_data <- function(n_samples, n_genes) {
   rna_normal_baseline <- rna_counts_sim[, 1:n_samples]
   rna_tumor_baseline <- rna_counts_sim[, (n_samples + 1):(2 * n_samples)]
   rna_baseline <- cbind(rna_normal_baseline, rna_tumor_baseline)
-  
   colnames(cnv) <- colnames(rna_tumor_baseline)
   
   # Dosage-insensitive genes
@@ -80,7 +79,6 @@ simulate_data <- function(n_samples, n_genes) {
   rownames(cnv_sens) <- rownames(d_sensitive)
   #cnv_sens <- cnv_sens / 2
   d_sensitive <- ceiling(d_sensitive * cnv_sens)
-  
   
   # Non-differentially expressed genes (non-DEGs)
   no_deg <- rna_baseline[(n_dosage_insensitive + n_dosage_sensitive + 1):n_genes, ]
@@ -146,7 +144,6 @@ for (n_samples in sample_sizes) {
     })
   }
 }
-
 
 
 

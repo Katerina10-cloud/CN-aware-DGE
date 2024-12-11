@@ -1,4 +1,4 @@
-## Test edgeR ##
+### Test edgeR ###
 
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/")
 pkgs <- c("dplyr", "ggplot2", "edgeR", "tidyverse")

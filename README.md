@@ -1,35 +1,13 @@
-# Copy-Number-aware Differential Gene Expression (DGE)
+# DeConveil
 
 ## Overview
 
-The presence of biological signals coming from different sources and affecting gene expression make it
-desirable to take them into account in differential expression analysis to provide more comprehensive insight regarding
-transcriptional patterns of cancer. In DGE analysis between cancer and normal tissues results can be both driven and masked by CNV, potentially leading to false positives and false negatives and could have significant impact on downstream analysis.
-
+The presence of biological signals coming from different sources and affecting gene expression make it desirable to take them into account in differential expression analysis to provide more comprehensive insight regarding transcriptional patterns of cancer. In DGE analysis between cancer and normal tissues gene expression variation can be both driven by CNV and by other independent regulatory mechanisms, e.g transcriptional factors (TF).
 
 
 ## Metodological design
-Our CN-aware approach directly integrates Copy Number (CN) data into *Generalized Linear Model (GLM)* statistical framework to model the *mean* of gene counts using *Negative Binomial* distribution as a *log linear function* of the covariates. The model assumes the linear relationship between the CN and expected mean.
+Our CN-aware approach directly integrates Copy Number (CN) data into *Generalized Linear Model (GLM)* statistical framework to model the *mean* of gene counts using *Negative Binomial* distribution as a *log linear function* of the covariates. The model assumes the linear relationship between the gene CN and expected mean.
 This method aims to separate genes whose expression is primarily driven by CNVs from those regulated by independent biological processes. This distinction is crucial in minimizing the confounding effects of CNVs, which can obscure true regulatory changes and lead to misinterpretations in traditional DGE analyses.
-
-
-$`K \sim NB(mean = \mu_{ij}, dispersion = \alpha_i)`$ 
-
-$`\mu_{ij} = s_{j} (\frac{CN_{ij}}{2}) q_{ij}`$  
-
-$`\log(q_{ij}) = \beta_{i0} X_{j0} + \beta_{i1} X_{j1}`$ 
-
-$`K_{ij} =`$ mRNA counts
-
-$`CN_{ij} =`$ copy number integers (0,1,2,...,5)
-
-$`X_j = [1, X_{j1}] = `$ covariate vector (design matrix, including intercept)
-
-$`\beta_i = [\beta_{i0}, \beta_{i1}] = `$ regression coefficient vector (base level, effect size)
-
-$`s_j =`$ library size factor
-
-
 
 
 
